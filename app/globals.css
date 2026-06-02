@@ -36,6 +36,8 @@
   --nav-bg: rgba(10,10,11,0.85);
   --shadow: 0 4px 24px rgba(0,0,0,0.4);
   --shadow-lg: 0 20px 60px rgba(0,0,0,0.6);
+
+  --diag-opacity: 0.055;
 }
 
 /* ── LIGHT MODE ── */
@@ -68,6 +70,8 @@
   --nav-bg: rgba(244,247,242,0.9);
   --shadow: 0 4px 24px rgba(0,0,0,0.08);
   --shadow-lg: 0 20px 60px rgba(0,0,0,0.12);
+
+  --diag-opacity: 0.04;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -80,6 +84,29 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   transition: background 0.3s, color 0.3s;
+}
+
+/* ── Global diagonal lines background ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    -35deg,
+    transparent,
+    transparent 34px,
+    var(--text) 34px,
+    var(--text) 35px
+  );
+  opacity: var(--diag-opacity);
+}
+
+/* Everything sits above the background */
+nav, main, section, footer, .modal-backdrop {
+  position: relative;
+  z-index: 1;
 }
 
 ::-webkit-scrollbar { width: 6px; }
@@ -111,6 +138,7 @@ body {
   box-shadow: 0 6px 28px rgba(207,250,124,0.4);
 }
 .btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 .btn-secondary {
   display: inline-flex;
@@ -139,17 +167,14 @@ body {
   from { opacity: 0; transform: translateY(16px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes pulse {
   0%,100% { opacity: 1; transform: scale(1); }
   50%      { opacity: 0.5; transform: scale(0.8); }
 }
-
 @keyframes shakeX {
   0%,100%{transform:translateX(0)}
   20%{transform:translateX(-8px)}
@@ -157,12 +182,10 @@ body {
   60%{transform:translateX(-5px)}
   80%{transform:translateX(5px)}
 }
-
 @keyframes burst {
   0%{transform:scale(1)} 40%{transform:scale(1.5)}
   70%{transform:scale(0.85)} 100%{transform:scale(1)}
 }
-
 @keyframes dotBounce {
   0%,80%,100%{transform:scale(0.6);opacity:0.4}
   40%{transform:scale(1);opacity:1}
