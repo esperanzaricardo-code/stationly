@@ -1,38 +1,55 @@
 'use client'
-import { useState } from 'react'
+import { useTheme } from './ThemeProvider'
+import Link from 'next/link'
 
 export default function Nav() {
+  const { theme, toggle } = useTheme()
+
   return (
     <nav style={{
       position: 'sticky', top: 0, zIndex: 100,
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0 32px', height: 64,
-      background: 'rgba(10,10,11,0.85)', backdropFilter: 'blur(20px)',
+      background: 'var(--nav-bg)',
+      backdropFilter: 'blur(20px)',
       borderBottom: '1px solid var(--border)',
+      transition: 'background 0.3s',
     }}>
-      <div style={{
-        fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22,
-        letterSpacing: '-0.5px',
-        background: 'linear-gradient(135deg, #fff 30%, #9b7eff)',
-        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-      }}>
-        Station<span style={{
-          background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-        }}>ly</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <Link href="/" style={{ textDecoration: 'none' }}>
+        <div style={{
+          fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22,
+          letterSpacing: '-0.5px', color: 'var(--text)',
+        }}>
+          Station<span style={{
+            background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>ly</span>
+        </div>
+      </Link>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Theme toggle */}
         <button
-          className="nav-pill"
-          onClick={() => document.dispatchEvent(new CustomEvent('stationly:open-upload'))}
+          onClick={toggle}
+          title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
           style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
-            color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700,
-            fontSize: 13, letterSpacing: '0.3px', padding: '9px 20px',
-            borderRadius: 50, border: 'none', cursor: 'pointer',
-            boxShadow: '0 0 20px var(--accent-glow)', transition: 'all 0.2s',
+            background: 'var(--surface2)', border: '1px solid var(--border)',
+            color: 'var(--text-muted)', width: 38, height: 38, borderRadius: '50%',
+            fontSize: 16, cursor: 'pointer', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
           }}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+
+        <Link href="/login" className="btn-secondary" style={{ fontSize: 13 }}>
+          Iniciar sesión
+        </Link>
+
+        <button
+          className="btn-primary"
+          onClick={() => document.dispatchEvent(new CustomEvent('stationly:open-upload'))}
+          style={{ fontSize: 13, padding: '9px 18px' }}
         >
           <span>📸</span> Subir Setup
         </button>
