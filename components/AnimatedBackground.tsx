@@ -35,46 +35,48 @@ export default function AnimatedBackground() {
       return {
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
-        size: 18 + Math.random() * 36,
+        size: 20 + Math.random() * 40,
         type: types[Math.floor(Math.random() * types.length)],
         rotation: Math.random() * Math.PI * 2,
-        speedX: (Math.random() - 0.5) * 0.25,
-        speedY: (Math.random() - 0.5) * 0.25,
-        speedR: (Math.random() - 0.5) * 0.003,
-        opacity: 0.04 + Math.random() * 0.07,
+        speedX: (Math.random() - 0.5) * 0.3,
+        speedY: (Math.random() - 0.5) * 0.3,
+        speedR: (Math.random() - 0.5) * 0.004,
+        opacity: 0.06 + Math.random() * 0.09,
       }
     }
 
-    function drawTriangle(ctx: CanvasRenderingContext2D, s: Shape) {
-      const h = s.size * 0.866
+    function drawShape(ctx: CanvasRenderingContext2D, s: Shape) {
+      ctx.save()
+      ctx.translate(s.x, s.y)
+      ctx.rotate(s.rotation)
+      ctx.lineWidth = 0.8
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
       ctx.beginPath()
-      ctx.moveTo(0, -h * 0.667)
-      ctx.lineTo(s.size / 2, h * 0.333)
-      ctx.lineTo(-s.size / 2, h * 0.333)
-      ctx.closePath()
-      ctx.stroke()
-    }
 
-    function drawSquare(ctx: CanvasRenderingContext2D, s: Shape) {
-      ctx.beginPath()
-      ctx.rect(-s.size / 2, -s.size / 2, s.size, s.size)
-      ctx.stroke()
-    }
+      if (s.type === 'triangle') {
+        const h = s.size * 0.866
+        ctx.moveTo(0, -h * 0.667)
+        ctx.lineTo(s.size / 2, h * 0.333)
+        ctx.lineTo(-s.size / 2, h * 0.333)
+        ctx.closePath()
+      } else if (s.type === 'square') {
+        ctx.rect(-s.size / 2, -s.size / 2, s.size, s.size)
+      } else {
+        ctx.moveTo(0, -s.size / 2)
+        ctx.lineTo(s.size / 2, 0)
+        ctx.lineTo(0, s.size / 2)
+        ctx.lineTo(-s.size / 2, 0)
+        ctx.closePath()
+      }
 
-    function drawDiamond(ctx: CanvasRenderingContext2D, s: Shape) {
-      ctx.beginPath()
-      ctx.moveTo(0, -s.size / 2)
-      ctx.lineTo(s.size / 2, 0)
-      ctx.lineTo(0, s.size / 2)
-      ctx.lineTo(-s.size / 2, 0)
-      ctx.closePath()
       ctx.stroke()
+      ctx.restore()
     }
 
     function draw() {
       if (!canvas || !ctx) return
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-
       const color = theme === 'dark' ? '255,255,255' : '0,0,0'
 
       shapes.forEach(s => {
@@ -82,32 +84,20 @@ export default function AnimatedBackground() {
         s.y += s.speedY
         s.rotation += s.speedR
 
-        // Wrap around edges
-        if (s.x < -s.size) s.x = canvas.width + s.size
-        if (s.x > canvas.width + s.size) s.x = -s.size
-        if (s.y < -s.size) s.y = canvas.height + s.size
-        if (s.y > canvas.height + s.size) s.y = -s.size
+        if (s.x < -s.size * 2) s.x = canvas.width + s.size
+        if (s.x > canvas.width + s.size * 2) s.x = -s.size
+        if (s.y < -s.size * 2) s.y = canvas.height + s.size
+        if (s.y > canvas.height + s.size * 2) s.y = -s.size
 
-        ctx.save()
-        ctx.translate(s.x, s.y)
-        ctx.rotate(s.rotation)
         ctx.strokeStyle = `rgba(${color},${s.opacity})`
-        ctx.lineWidth = 0.8
-        ctx.lineCap = 'round'
-        ctx.lineJoin = 'round'
-
-        if (s.type === 'triangle') drawTriangle(ctx, s)
-        else if (s.type === 'square') drawSquare(ctx, s)
-        else drawDiamond(ctx, s)
-
-        ctx.restore()
+        drawShape(ctx, s)
       })
 
       animId = requestAnimationFrame(draw)
     }
 
     resize()
-    shapes = Array.from({ length: 28 }, randomShape)
+    shapes = Array.from({ length: 30 }, randomShape)
     draw()
 
     window.addEventListener('resize', resize)
@@ -121,8 +111,13 @@ export default function AnimatedBackground() {
     <canvas
       ref={canvasRef}
       style={{
-        position: 'fixed', inset: 0, zIndex: 0,
-        pointerEvents: 'none', width: '100%', height: '100%',
+        position: 'fixed',
+        top: 0, left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 0,
+        pointerEvents: 'none',
+        display: 'block',
       }}
     />
   )
