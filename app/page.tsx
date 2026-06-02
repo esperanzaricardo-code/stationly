@@ -1,6 +1,7 @@
 import { supabase, Setup } from '@/lib/supabase'
+import { ThemeProvider } from '@/components/ThemeProvider'
 import Nav from '@/components/Nav'
-import Hero from '@/components/Hero'
+import LandingHero from '@/components/LandingHero'
 import Filters from '@/components/Filters'
 import Feed from '@/components/Feed'
 import UploadModal from '@/components/UploadModal'
@@ -19,25 +20,21 @@ async function getSetups(): Promise<Setup[]> {
 
 async function getStats() {
   const { count: setupCount } = await supabase
-    .from('setups')
-    .select('*', { count: 'exact', head: true })
-  const { data: likesData } = await supabase
-    .from('setups')
-    .select('likes')
+    .from('setups').select('*', { count: 'exact', head: true })
+  const { data: likesData } = await supabase.from('setups').select('likes')
   const totalLikes = likesData?.reduce((a, s) => a + (s.likes || 0), 0) || 0
   return { setupCount: setupCount || 0, totalLikes }
 }
 
 export default async function Home() {
   const [setups, stats] = await Promise.all([getSetups(), getStats()])
-
   return (
-    <>
+    <ThemeProvider>
       <Nav />
-      <Hero setupCount={stats.setupCount} totalLikes={stats.totalLikes} />
+      <LandingHero setupCount={stats.setupCount} totalLikes={stats.totalLikes} />
       <Filters />
       <Feed initialSetups={setups} />
       <UploadModal />
-    </>
+    </ThemeProvider>
   )
 }
