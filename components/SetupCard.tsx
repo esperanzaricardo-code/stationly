@@ -4,8 +4,8 @@ import Image from 'next/image'
 import { Setup } from '@/lib/supabase'
 
 const AVATAR_GRADIENTS = [
-  ['#7c5cfc','#e040fb'], ['#f43f5e','#fb923c'], ['#06b6d4','#6366f1'],
-  ['#34d399','#059669'], ['#fbbf24','#f59e0b'], ['#e040fb','#7c5cfc'],
+  ['#CFFA7C','#9CE89D'], ['#f43f5e','#fb923c'], ['#06b6d4','#6366f1'],
+  ['#34d399','#059669'], ['#fbbf24','#f59e0b'], ['#9CE89D','#CFFA7C'],
   ['#60a5fa','#3b82f6'], ['#f472b6','#ec4899'],
 ]
 
@@ -20,15 +20,6 @@ function getAvatarGradient(user: string) {
   return `linear-gradient(135deg, ${a}, ${b})`
 }
 
-function getTagStyle(tag: string) {
-  const l = tag.toLowerCase()
-  if (['rtx','rx ','gpu','radeon','nvidia','geforce'].some(k => l.includes(k)))
-    return { bg: 'rgba(251,146,60,0.1)', border: 'rgba(251,146,60,0.35)', color: '#fb923c' }
-  if (['elgato','stream deck','shure','rode','capture'].some(k => l.includes(k)))
-    return { bg: 'rgba(52,211,153,0.1)', border: 'rgba(52,211,153,0.35)', color: '#34d399' }
-  return { bg: 'var(--tag-bg)', border: 'var(--tag-border)', color: '#a98bff' }
-}
-
 const PLACEHOLDER_COLORS = [
   ['#1a1a2e','#16213e','#0f3460'], ['#0d0d0d','#1a0a2e','#2a0a4e'],
   ['#0a1628','#0e2040','#1a3a6e'], ['#0f0f0f','#1a1a0a','#2a2a0a'],
@@ -41,14 +32,8 @@ function PlaceholderImg({ user }: { user: string }) {
   const [c1, c2, c3] = PLACEHOLDER_COLORS[h % PLACEHOLDER_COLORS.length]
   const icon = ICONS[h % ICONS.length]
   return (
-    <div style={{
-      width: '100%', paddingBottom: '70%', position: 'relative',
-      background: `linear-gradient(135deg, ${c1}, ${c2}, ${c3})`,
-    }}>
-      <span style={{
-        position: 'absolute', bottom: 12, left: '50%',
-        transform: 'translateX(-50%)', fontSize: 32,
-      }}>{icon}</span>
+    <div style={{ width: '100%', paddingBottom: '70%', position: 'relative', background: `linear-gradient(135deg, ${c1}, ${c2}, ${c3})` }}>
+      <span style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', fontSize: 32 }}>{icon}</span>
     </div>
   )
 }
@@ -73,22 +58,20 @@ export default function SetupCard({ setup }: { setup: Setup }) {
     e.stopPropagation()
     if (loading) return
     setLoading(true)
-    const action = liked ? 'unlike' : 'like'
     const newLiked = !liked
-    const newLikes = likes + (newLiked ? 1 : -1)
     setLiked(newLiked)
-    setLikes(newLikes)
+    setLikes(l => l + (newLiked ? 1 : -1))
     try {
       const res = await fetch('/api/likes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: setup.id, action }),
+        body: JSON.stringify({ id: setup.id, action: newLiked ? 'like' : 'unlike' }),
       })
       const data = await res.json()
       if (data.likes !== undefined) setLikes(data.likes)
     } catch {
       setLiked(!newLiked)
-      setLikes(likes)
+      setLikes(l => l + (newLiked ? -1 : 1))
     } finally {
       setLoading(false)
     }
@@ -100,23 +83,22 @@ export default function SetupCard({ setup }: { setup: Setup }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         breakInside: 'avoid', marginBottom: 16,
-        background: 'var(--surface)', border: `1px solid ${hovered ? 'rgba(124,92,252,0.3)' : 'var(--border)'}`,
+        background: 'var(--surface)',
+        border: `1px solid ${hovered ? 'var(--accent)' : 'var(--border)'}`,
         borderRadius: 'var(--radius)', overflow: 'hidden', cursor: 'pointer',
         transform: hovered ? 'translateY(-4px)' : 'none',
-        boxShadow: hovered ? '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,92,252,0.2)' : 'none',
+        boxShadow: hovered ? '0 16px 48px rgba(0,0,0,0.2), 0 0 0 1px var(--accent)' : 'var(--shadow)',
         transition: 'transform 0.25s cubic-bezier(.4,0,.2,1), box-shadow 0.25s, border-color 0.25s',
         animation: 'cardIn 0.5s cubic-bezier(.4,0,.2,1) both',
       }}
     >
-      <style>{`@keyframes cardIn { from{opacity:0;transform:translateY(20px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }`}</style>
+      {/* Image */}
       <div style={{ position: 'relative', overflow: 'hidden', background: 'var(--surface3)' }}>
         {setup.image_url ? (
           <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3' }}>
             <Image
-              src={setup.image_url}
-              alt={setup.title}
-              fill
-              style={{ objectFit: 'cover', transition: hovered ? 'transform 0.4s cubic-bezier(.4,0,.2,1)' : 'none', transform: hovered ? 'scale(1.04)' : 'scale(1)' }}
+              src={setup.image_url} alt={setup.title} fill
+              style={{ objectFit: 'cover', transform: hovered ? 'scale(1.04)' : 'scale(1)', transition: 'transform 0.4s cubic-bezier(.4,0,.2,1)' }}
               sizes="(max-width: 540px) 100vw, (max-width: 860px) 50vw, (max-width: 1200px) 33vw, 25vw"
             />
           </div>
@@ -124,10 +106,11 @@ export default function SetupCard({ setup }: { setup: Setup }) {
           <PlaceholderImg user={setup.user_name} />
         )}
         {hovered && (
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 60%)' }} />
         )}
       </div>
 
+      {/* Body */}
       <div style={{ padding: '14px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -135,12 +118,13 @@ export default function SetupCard({ setup }: { setup: Setup }) {
               width: 32, height: 32, borderRadius: '50%',
               background: getAvatarGradient(setup.user_name),
               fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 12,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#0a0a0b', flexShrink: 0,
             }}>
               {setup.user_name.slice(0, 2).toUpperCase()}
             </div>
             <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, letterSpacing: '-0.2px' }}>{setup.user_name}</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{setup.user_name}</div>
               <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(setup.created_at)}</div>
             </div>
           </div>
@@ -153,8 +137,7 @@ export default function SetupCard({ setup }: { setup: Setup }) {
               border: `1px solid ${liked ? 'rgba(255,77,109,0.5)' : 'var(--border)'}`,
               color: liked ? 'var(--like)' : 'var(--text-muted)',
               fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 500,
-              padding: '5px 10px', borderRadius: 50, cursor: 'pointer',
-              transition: 'all 0.18s',
+              padding: '5px 10px', borderRadius: 50, cursor: 'pointer', transition: 'all 0.18s',
             }}
           >
             <span style={{ fontSize: 13, transition: 'transform 0.2s', transform: liked ? 'scale(1.25)' : 'scale(1)' }}>
@@ -164,22 +147,20 @@ export default function SetupCard({ setup }: { setup: Setup }) {
           </button>
         </div>
 
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, letterSpacing: '-0.3px', marginBottom: 8, lineHeight: 1.3 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, letterSpacing: '-0.3px', marginBottom: 8, lineHeight: 1.3, color: 'var(--text)' }}>
           {setup.title}
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-          {(setup.tags || []).map((tag, i) => {
-            const s = getTagStyle(tag)
-            return (
-              <span key={i} style={{
-                background: s.bg, border: `1px solid ${s.border}`, color: s.color,
-                fontSize: 10, fontWeight: 500, padding: '3px 9px', borderRadius: 50, letterSpacing: '0.3px',
-              }}>
-                {tag}
-              </span>
-            )
-          })}
+          {(setup.tags || []).map((tag, i) => (
+            <span key={i} style={{
+              background: 'var(--tag-bg)', border: '1px solid var(--tag-border)',
+              color: 'var(--tag-text)', fontSize: 10, fontWeight: 500,
+              padding: '3px 9px', borderRadius: 50, letterSpacing: '0.3px',
+            }}>
+              {tag}
+            </span>
+          ))}
         </div>
       </div>
     </div>
