@@ -86,28 +86,8 @@ body {
   transition: background 0.3s, color 0.3s;
 }
 
-/* ── Global diagonal lines background ── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(
-    -35deg,
-    transparent,
-    transparent 34px,
-    var(--text) 34px,
-    var(--text) 35px
-  );
-  opacity: var(--diag-opacity);
-}
+/* ── No static background pattern — using animated canvas instead ── */
 
-/* Everything sits above the background */
-nav, main, section, footer, .modal-backdrop {
-  position: relative;
-  z-index: 1;
-}
 
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
