@@ -13,8 +13,8 @@ export default function LandingHero({ setupCount, totalLikes }: { setupCount: nu
       setTimeout(() => {
         setWordIndex(i => (i + 1) % ROTATING_WORDS.length)
         setVisible(true)
-      }, 300)
-    }, 2500)
+      }, 400)
+    }, 4000) // 4 segundos entre cambios
     return () => clearInterval(interval)
   }, [])
 
@@ -37,30 +37,34 @@ export default function LandingHero({ setupCount, totalLikes }: { setupCount: nu
         La red social de setups
       </div>
 
-      {/* Title */}
-      <div style={{ marginBottom: 20, paddingBottom: 8 }}>
+      {/* Title — extra padding-bottom to avoid clipping descenders */}
+      <div style={{ marginBottom: 24 }}>
         <h1 style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 'clamp(36px, 5.5vw, 68px)',
-          fontWeight: 800, lineHeight: 1.08,
+          fontSize: 'clamp(34px, 5vw, 64px)',
+          fontWeight: 800, lineHeight: 1.1,
           letterSpacing: '-1px', color: 'var(--text)',
-          margin: 0, padding: '0 0 4px 0',
+          margin: 0,
         }}>
           El setup de los mejores
         </h1>
-        <div style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 'clamp(36px, 5.5vw, 68px)',
-          fontWeight: 800, lineHeight: 1.15,
-          letterSpacing: '-1px',
-          background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text', display: 'inline-block',
-          padding: '0 4px 8px',
-          transition: 'opacity 0.3s',
-          opacity: visible ? 1 : 0,
-        }}>
-          {ROTATING_WORDS[wordIndex]}
+        {/* Wrapper with overflow visible and extra bottom space for descenders */}
+        <div style={{ paddingBottom: 12, overflow: 'visible' }}>
+          <span style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(34px, 5vw, 64px)',
+            fontWeight: 800, lineHeight: 1.2,
+            letterSpacing: '-1px',
+            background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            display: 'inline-block',
+            transition: 'opacity 0.4s ease',
+            opacity: visible ? 1 : 0,
+            paddingBottom: 6,
+          }}>
+            {ROTATING_WORDS[wordIndex]}
+          </span>
         </div>
       </div>
 
