@@ -5,15 +5,14 @@ import LandingHero from '@/components/LandingHero'
 import Filters from '@/components/Filters'
 import Feed from '@/components/Feed'
 import UploadModal from '@/components/UploadModal'
+import AnimatedBackground from '@/components/AnimatedBackground'
 
 export const revalidate = 0
 
 async function getSetups(): Promise<Setup[]> {
   const { data, error } = await supabase
-    .from('setups')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(100)
+    .from('setups').select('*')
+    .order('created_at', { ascending: false }).limit(100)
   if (error) { console.error(error); return [] }
   return data || []
 }
@@ -30,6 +29,7 @@ export default async function Home() {
   const [setups, stats] = await Promise.all([getSetups(), getStats()])
   return (
     <ThemeProvider>
+      <AnimatedBackground />
       <Nav />
       <LandingHero setupCount={stats.setupCount} totalLikes={stats.totalLikes} />
       <Filters />
