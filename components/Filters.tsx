@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 const FILTERS = [
   { key: 'all', label: '✦ Todos' },
@@ -20,8 +20,9 @@ export default function Filters() {
 
   return (
     <div style={{
-      position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center',
-      gap: 10, padding: '0 32px 32px', maxWidth: 1400, margin: '0 auto',
+      position: 'relative', zIndex: 1,
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '0 32px 28px', maxWidth: 1400, margin: '0 auto',
       overflowX: 'auto', scrollbarWidth: 'none',
     }}>
       {FILTERS.map(f => (
@@ -30,12 +31,13 @@ export default function Filters() {
           onClick={() => handleFilter(f.key)}
           style={{
             flexShrink: 0,
-            background: active === f.key ? 'var(--tag-bg)' : 'var(--surface2)',
-            border: `1px solid ${active === f.key ? 'var(--tag-border)' : 'var(--border)'}`,
-            color: active === f.key ? '#a98bff' : 'var(--text-muted)',
-            fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500,
+            background: active === f.key ? 'linear-gradient(135deg, #CFFA7C, #9CE89D)' : 'var(--surface2)',
+            border: `1px solid ${active === f.key ? 'transparent' : 'var(--border)'}`,
+            color: active === f.key ? '#0a0a0b' : 'var(--text-muted)',
+            fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: active === f.key ? 700 : 500,
             padding: '7px 16px', borderRadius: 50, cursor: 'pointer',
             transition: 'all 0.18s', whiteSpace: 'nowrap',
+            boxShadow: active === f.key ? '0 2px 12px rgba(207,250,124,0.3)' : 'none',
           }}
         >
           {f.label}
