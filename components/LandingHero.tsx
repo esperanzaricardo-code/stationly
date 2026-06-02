@@ -21,109 +21,154 @@ export default function LandingHero({ setupCount, totalLikes }: { setupCount: nu
   return (
     <section style={{
       position: 'relative', zIndex: 1,
-      padding: '80px 32px 64px',
+      padding: '80px 32px 72px',
       maxWidth: 1400, margin: '0 auto',
       textAlign: 'center',
+      overflow: 'visible',
     }}>
-      {/* Eyebrow */}
+
+      {/* ── Chevron background pattern ── */}
       <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: 8,
-        background: 'var(--tag-bg)', border: '1px solid var(--tag-border)',
-        color: 'var(--tag-text)', fontSize: 11, fontWeight: 600,
-        letterSpacing: '1.5px', textTransform: 'uppercase',
-        padding: '5px 14px', borderRadius: 50, marginBottom: 28,
+        position: 'absolute', inset: 0,
+        overflow: 'hidden', zIndex: 0, pointerEvents: 'none',
+        opacity: 0.07,
       }}>
-        <span style={{ width: 6, height: 6, background: 'var(--accent)', borderRadius: '50%', display: 'inline-block', animation: 'pulse 2s ease infinite' }} />
-        La red social de setups
+        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="chevrons" x="0" y="0" width="120" height="80" patternUnits="userSpaceOnUse">
+              {/* Two chevron strokes per tile */}
+              <polyline points="0,40 30,10 60,40" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              <polyline points="60,40 90,10 120,40" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              <polyline points="0,80 30,50 60,80" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              <polyline points="60,80 90,50 120,80" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#chevrons)" color="var(--text)" />
+        </svg>
       </div>
 
-      {/* Title */}
-      <h1 style={{
-        fontFamily: 'var(--font-display)',
-        fontSize: 'clamp(40px, 6vw, 76px)',
-        fontWeight: 800, lineHeight: 1.0,
-        letterSpacing: '-2px', marginBottom: 12,
-        color: 'var(--text)',
-      }}>
-        El setup de los mejores<br />
-        <span style={{
-          background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-          display: 'inline-block',
-          transition: 'opacity 0.3s',
-          opacity: visible ? 1 : 0,
+      {/* ── Content ── */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
+
+        {/* Eyebrow */}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          background: 'var(--tag-bg)', border: '1px solid var(--tag-border)',
+          color: 'var(--tag-text)', fontSize: 11, fontWeight: 600,
+          letterSpacing: '1.5px', textTransform: 'uppercase',
+          padding: '5px 14px', borderRadius: 50, marginBottom: 28,
         }}>
-          {ROTATING_WORDS[wordIndex]}
-        </span>
-      </h1>
+          <span style={{ width: 6, height: 6, background: 'var(--accent)', borderRadius: '50%', display: 'inline-block', animation: 'pulse 2s ease infinite' }} />
+          La red social de setups
+        </div>
 
-      {/* Subtitle */}
-      <p style={{
-        color: 'var(--text-muted)', fontSize: 18, fontWeight: 300,
-        maxWidth: 540, margin: '0 auto 40px',
-        lineHeight: 1.65,
-      }}>
-        Sube tu escritorio, etiqueta tus componentes con IA y comparte tu link en la bio.
-        Tus viewers descubren exactamente con qué trabajas y juegas.
-      </p>
-
-      {/* CTA buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 64, flexWrap: 'wrap' }}>
-        <button
-          className="btn-primary"
-          onClick={() => document.dispatchEvent(new CustomEvent('stationly:open-upload'))}
-          style={{ fontSize: 15, padding: '13px 28px' }}
-        >
-          📸 Subir mi Setup
-        </button>
-        <a href="#feed" className="btn-secondary" style={{ fontSize: 15, padding: '13px 28px' }}>
-          Explorar setups ↓
-        </a>
-      </div>
-
-      {/* Stats */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: 48, flexWrap: 'wrap',
-      }}>
-        {[
-          { num: setupCount || 8, label: 'Setups publicados' },
-          { num: totalLikes || 2966, label: 'Likes totales' },
-          { num: 247, label: 'Creadores' },
-        ].map(({ num, label }) => (
-          <div key={label} style={{ textAlign: 'center' }}>
-            <div style={{
-              fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 800,
-              letterSpacing: '-1px', color: 'var(--text)',
-              background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            }}>
-              {num.toLocaleString()}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 2 }}>
-              {label}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* How it works */}
-      <div id="feed" style={{ marginTop: 80, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, maxWidth: 900, margin: '80px auto 0' }}>
-        {[
-          { icon: '📸', title: 'Sube tu foto', desc: 'Arrastra la imagen de tu setup' },
-          { icon: '🤖', title: 'IA detecta todo', desc: 'Claude identifica tus componentes automáticamente' },
-          { icon: '🔗', title: 'Comparte tu link', desc: 'Tu página pública lista para la bio de Twitch o YouTube' },
-        ].map((step, i) => (
-          <div key={i} style={{
-            background: 'var(--surface)', border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)', padding: '24px 20px',
-            textAlign: 'center', transition: 'border-color 0.2s',
+        {/* Title */}
+        <div style={{ marginBottom: 20, paddingBottom: 8 }}>
+          <h1 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(36px, 5.5vw, 68px)',
+            fontWeight: 800,
+            lineHeight: 1.08,
+            letterSpacing: '-1px',
+            color: 'var(--text)',
+            margin: 0,
+            padding: '0 0 4px 0',
           }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>{step.icon}</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>{step.title}</div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>{step.desc}</div>
+            El setup de los mejores
+          </h1>
+          <div style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(36px, 5.5vw, 68px)',
+            fontWeight: 800,
+            lineHeight: 1.15,
+            letterSpacing: '-1px',
+            background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            display: 'inline-block',
+            padding: '0 4px 8px',
+            transition: 'opacity 0.3s',
+            opacity: visible ? 1 : 0,
+          }}>
+            {ROTATING_WORDS[wordIndex]}
           </div>
-        ))}
+        </div>
+
+        {/* Subtitle */}
+        <p style={{
+          color: 'var(--text-muted)', fontSize: 17, fontWeight: 300,
+          maxWidth: 520, margin: '0 auto 40px',
+          lineHeight: 1.65,
+        }}>
+          Sube tu escritorio, etiqueta tus componentes con IA y comparte tu link en la bio.
+          Tus viewers descubren exactamente con qué trabajas y juegas.
+        </p>
+
+        {/* CTA */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 64, flexWrap: 'wrap' }}>
+          <button
+            className="btn-primary"
+            onClick={() => document.dispatchEvent(new CustomEvent('stationly:open-upload'))}
+            style={{ fontSize: 15, padding: '13px 28px' }}
+          >
+            📸 Subir mi Setup
+          </button>
+          <a href="#feed-section" className="btn-secondary" style={{ fontSize: 15, padding: '13px 28px' }}>
+            Explorar setups ↓
+          </a>
+        </div>
+
+        {/* Stats */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 48, flexWrap: 'wrap', marginBottom: 72,
+        }}>
+          {[
+            { num: setupCount || 8, label: 'Setups publicados' },
+            { num: totalLikes || 2966, label: 'Likes totales' },
+            { num: 247, label: 'Creadores' },
+          ].map(({ num, label }) => (
+            <div key={label} style={{ textAlign: 'center' }}>
+              <div style={{
+                fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 800,
+                letterSpacing: '-1px',
+                background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>
+                {num.toLocaleString()}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 3 }}>
+                {label}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* How it works */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 16, maxWidth: 860, margin: '0 auto',
+        }}>
+          {[
+            { icon: '📸', title: 'Sube tu foto', desc: 'Arrastra la imagen de tu setup' },
+            { icon: '🤖', title: 'IA detecta todo', desc: 'Claude identifica tus componentes automáticamente' },
+            { icon: '🔗', title: 'Comparte tu link', desc: 'Tu página pública lista para la bio de Twitch o YouTube' },
+          ].map((step, i) => (
+            <div key={i} style={{
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)', padding: '24px 20px',
+              textAlign: 'center',
+              backdropFilter: 'blur(8px)',
+            }}>
+              <div style={{ fontSize: 30, marginBottom: 10 }}>{step.icon}</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>{step.title}</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>{step.desc}</div>
+            </div>
+          ))}
+        </div>
+
       </div>
     </section>
   )
