@@ -14,7 +14,7 @@ export default function LandingHero({ setupCount, totalLikes }: { setupCount: nu
         setWordIndex(i => (i + 1) % ROTATING_WORDS.length)
         setVisible(true)
       }, 400)
-    }, 4000) // 4 segundos entre cambios
+    }, 4000)
     return () => clearInterval(interval)
   }, [])
 
@@ -37,34 +37,34 @@ export default function LandingHero({ setupCount, totalLikes }: { setupCount: nu
         La red social de setups
       </div>
 
-      {/* Title — extra padding-bottom to avoid clipping descenders */}
+      {/* Title */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 'clamp(34px, 5vw, 64px)',
-          fontWeight: 800, lineHeight: 1.1,
-          letterSpacing: '-1px', color: 'var(--text)',
-          margin: 0,
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontSize: 'clamp(32px, 4.8vw, 62px)',
+          fontWeight: 700,
+          lineHeight: 1.12,
+          letterSpacing: '-0.5px',
+          color: 'var(--text)',
+          margin: '0 0 8px 0',
         }}>
           El setup de los mejores
         </h1>
-        {/* Wrapper with overflow visible and extra bottom space for descenders */}
-        <div style={{ paddingBottom: 12, overflow: 'visible' }}>
-          <span style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(34px, 5vw, 64px)',
-            fontWeight: 800, lineHeight: 1.2,
-            letterSpacing: '-1px',
-            background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            display: 'inline-block',
-            transition: 'opacity 0.4s ease',
-            opacity: visible ? 1 : 0,
-            paddingBottom: 6,
-          }}>
-            {ROTATING_WORDS[wordIndex]}
-          </span>
+        <div style={{
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontSize: 'clamp(32px, 4.8vw, 62px)',
+          fontWeight: 700,
+          lineHeight: 1.3,
+          letterSpacing: '-0.5px',
+          background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          display: 'inline-block',
+          transition: 'opacity 0.4s ease',
+          opacity: visible ? 1 : 0,
+        }}>
+          {ROTATING_WORDS[wordIndex]}
         </div>
       </div>
 
@@ -72,6 +72,7 @@ export default function LandingHero({ setupCount, totalLikes }: { setupCount: nu
       <p style={{
         color: 'var(--text-muted)', fontSize: 17, fontWeight: 300,
         maxWidth: 520, margin: '0 auto 40px', lineHeight: 1.65,
+        fontFamily: 'var(--font-body)',
       }}>
         Sube tu escritorio, etiqueta tus componentes con IA y comparte tu link en la bio.
         Tus viewers descubren exactamente con qué trabajas y juegas.
@@ -96,7 +97,8 @@ export default function LandingHero({ setupCount, totalLikes }: { setupCount: nu
         ].map(({ num, label }) => (
           <div key={label} style={{ textAlign: 'center' }}>
             <div style={{
-              fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 800, letterSpacing: '-1px',
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontSize: 30, fontWeight: 700, letterSpacing: '-0.5px',
               background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             }}>
@@ -121,7 +123,7 @@ export default function LandingHero({ setupCount, totalLikes }: { setupCount: nu
             borderRadius: 'var(--radius)', padding: '24px 20px', textAlign: 'center',
           }}>
             <div style={{ fontSize: 30, marginBottom: 10 }}>{step.icon}</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>{step.title}</div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>{step.title}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>{step.desc}</div>
           </div>
         ))}
