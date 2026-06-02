@@ -74,7 +74,7 @@ export default function UploadModal() {
     if (!accepted.length) return
     const existing = tagsInput.trim()
     const merged = existing
-      ? [...new Set([...existing.split(',').map(s => s.trim()), ...accepted])].join(', ')
+     ? Array.from(new Set([...existing.split(',').map(s => s.trim()), ...accepted])).join(', ')
       : accepted.join(', ')
     setTagsInput(merged)
   }
