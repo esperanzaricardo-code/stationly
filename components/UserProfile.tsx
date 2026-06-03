@@ -105,12 +105,12 @@ export default function UserProfile({ setups, username }: Props) {
           {setups.map((s, i) => (
             <button key={s.id} onClick={() => setActiveSetup(i)} style={{
               flexShrink: 0, padding: '7px 16px', borderRadius: 50, border: 'none',
-              background: activeSetup === i ? 'linear-gradient(135deg, #CFFA7C, #9CE89D)' : 'var(--surface2)',
-              color: activeSetup === i ? '#0a0a0b' : 'var(--text-muted)',
-              fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-              cursor: 'pointer', transition: 'all 0.18s',
-              border: activeSetup === i ? 'none' : '1px solid var(--border)',
-            } as React.CSSProperties}>
+            background: activeSetup === i ? 'linear-gradient(135deg, #CFFA7C, #9CE89D)' : 'var(--surface2)',
+border: activeSetup === i ? 'none' : '1px solid var(--border)',
+color: activeSetup === i ? '#0a0a0b' : 'var(--text-muted)',
+fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
+cursor: 'pointer', transition: 'all 0.18s',
+} as React.CSSProperties}>
               {s.title}
             </button>
           ))}
