@@ -2,7 +2,7 @@
 import { useTheme } from './ThemeProvider'
 import Link from 'next/link'
 
-export default function Nav() {
+export default function Nav({ setupCount, totalLikes }: { setupCount?: number; totalLikes?: number }) {
   const { theme, toggle } = useTheme()
 
   return (
@@ -10,13 +10,11 @@ export default function Nav() {
       position: 'sticky', top: 0, zIndex: 100,
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0 32px', height: 64,
-      background: 'var(--nav-bg)',
-      backdropFilter: 'blur(20px)',
+      background: 'var(--nav-bg)', backdropFilter: 'blur(20px)',
       borderBottom: '1px solid var(--border)',
-      transition: 'background 0.3s',
     }}>
       <Link href="/" style={{ textDecoration: 'none' }}>
-        <div style={{
+        <span style={{
           fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22,
           letterSpacing: '-0.5px', color: 'var(--text)',
         }}>
@@ -24,11 +22,10 @@ export default function Nav() {
             background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
           }}>ly</span>
-        </div>
+        </span>
       </Link>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {/* Theme toggle */}
         <button
           onClick={toggle}
           title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
