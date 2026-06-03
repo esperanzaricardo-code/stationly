@@ -1,12 +1,15 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import ImageCropper from './ImageCropper'
 
 type AiTag = { label: string; accepted: boolean }
 
 export default function UploadModal() {
   const [open, setOpen] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [rawPreview, setRawPreview] = useState<string | null>(null)
+  const [croppedPreview, setCroppedPreview] = useState<string | null>(null)
+  const [showCropper, setShowCropper] = useState(false)
   const [dragover, setDragover] = useState(false)
   const [userName, setUserName] = useState('')
   const [title, setTitle] = useState('')
@@ -29,13 +32,30 @@ export default function UploadModal() {
     if (file.size > 10 * 1024 * 1024) { alert('Máximo 10MB'); return }
     setImageFile(file)
     const reader = new FileReader()
-    reader.onload = e => setImagePreview(e.target?.result as string)
+    reader.onload = e => {
+      setRawPreview(e.target?.result as string)
+      setCroppedPreview(null)
+      setShowCropper(true)
+    }
     reader.readAsDataURL(file)
     setAiTags([]); setAiDone(false); setAiError('')
   }
 
+  function handleCropDone(dataUrl: string) {
+    setCroppedPreview(dataUrl)
+    setShowCropper(false)
+  }
+
+  function handleCropCancel() {
+    setRawPreview(null)
+    setImageFile(null)
+    setShowCropper(false)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
   function clearImage() {
-    setImageFile(null); setImagePreview(null)
+    setImageFile(null); setRawPreview(null); setCroppedPreview(null)
+    setShowCropper(false)
     setAiTags([]); setAiDone(false); setAiError('')
     if (fileRef.current) fileRef.current.value = ''
   }
@@ -46,11 +66,12 @@ export default function UploadModal() {
   }
 
   async function runAiScan() {
-    if (!imagePreview) return
+    const preview = croppedPreview || rawPreview
+    if (!preview) return
     setAiScanning(true); setAiError(''); setAiTags([]); setAiDone(false)
     try {
-      const base64 = imagePreview.split(',')[1]
-      const mediaType = imagePreview.split(';')[0].split(':')[1]
+      const base64 = preview.split(',')[1]
+      const mediaType = preview.split(';')[0].split(':')[1]
       const res = await fetch('/api/ai-scan', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64: base64, mediaType }),
@@ -90,13 +111,25 @@ export default function UploadModal() {
     if (!title.trim()) return
     setSubmitting(true)
     try {
-      const tags = tagsInput.trim() ? tagsInput.split(',').map(t => t.trim()).filter(Boolean).slice(0, 10) : ['Custom Setup']
+      const tags = tagsInput.trim()
+        ? tagsInput.split(',').map(t => t.trim()).filter(Boolean).slice(0, 10)
+        : ['Custom Setup']
+      const category = autoCategory(tags)
       const fd = new FormData()
       fd.append('user_name', userName.trim())
       fd.append('title', title.trim())
-      fd.append('category', autoCategory(tags))
+      fd.append('category', category)
       fd.append('tags', JSON.stringify(tags))
-      if (imageFile) fd.append('image', imageFile)
+
+      // Use cropped image if available, otherwise original file
+      if (croppedPreview) {
+        const res = await fetch(croppedPreview)
+        const blob = await res.blob()
+        fd.append('image', new File([blob], 'setup.jpg', { type: 'image/jpeg' }))
+      } else if (imageFile) {
+        fd.append('image', imageFile)
+      }
+
       const res = await fetch('/api/setups', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -131,7 +164,7 @@ export default function UploadModal() {
         <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 24 }}>Muéstrale al mundo cómo trabajas y juegas.</p>
 
         {/* Drop zone */}
-        {!imagePreview && (
+        {!rawPreview && !croppedPreview && (
           <div
             onDragOver={e => { e.preventDefault(); setDragover(true) }}
             onDragLeave={() => setDragover(false)}
@@ -145,16 +178,30 @@ export default function UploadModal() {
           </div>
         )}
 
-        {/* Preview */}
-        {imagePreview && (
+        {/* Cropper */}
+        {showCropper && rawPreview && (
+          <ImageCropper
+            src={rawPreview}
+            onCrop={handleCropDone}
+            onCancel={handleCropCancel}
+          />
+        )}
+
+        {/* Cropped preview */}
+        {!showCropper && croppedPreview && (
           <div style={{ position: 'relative', borderRadius: 'var(--radius-sm)', overflow: 'hidden', marginBottom: 16 }}>
-            <img src={imagePreview} alt="Preview" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }} />
-            <button onClick={clearImage} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', width: 28, height: 28, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            <img src={croppedPreview} alt="Preview" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' }} />
+            <div style={{ position: 'absolute', bottom: 8, right: 8, display: 'flex', gap: 6 }}>
+              <button onClick={() => setShowCropper(true)} style={{ background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, padding: '4px 10px', cursor: 'pointer', backdropFilter: 'blur(4px)' }}>
+                ✎ Reencuadrar
+              </button>
+              <button onClick={clearImage} style={{ background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', width: 28, height: 28, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            </div>
           </div>
         )}
 
-        {/* AI Panel */}
-        {imagePreview && (
+        {/* AI Panel — only show when image is cropped and cropper is hidden */}
+        {!showCropper && croppedPreview && (
           <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16, marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
@@ -195,21 +242,25 @@ export default function UploadModal() {
           </div>
         )}
 
-        {/* Form fields */}
-        {[
-          { label: 'Tu nombre / alias', value: userName, set: setUserName, placeholder: 'Ej: ShadowSetup, NightOwl...' },
-          { label: 'Nombre del Setup', value: title, set: setTitle, placeholder: 'Ej: The Cyberpunk Lair...' },
-          { label: 'Componentes (separados por coma)', value: tagsInput, set: setTagsInput, placeholder: 'RTX 4090, Keychron K2, LG OLED...' },
-        ].map(f => (
-          <div key={f.label} style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>{f.label}</label>
-            <input value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.placeholder} style={inputStyle} />
-          </div>
-        ))}
+        {/* Form fields — only show when not in cropper */}
+        {!showCropper && (
+          <>
+            {[
+              { label: 'Tu nombre / alias', value: userName, set: setUserName, placeholder: 'Ej: ShadowSetup, NightOwl...' },
+              { label: 'Nombre del Setup', value: title, set: setTitle, placeholder: 'Ej: The Cyberpunk Lair...' },
+              { label: 'Componentes (separados por coma)', value: tagsInput, set: setTagsInput, placeholder: 'RTX 4090, Keychron K2, LG OLED...' },
+            ].map(f => (
+              <div key={f.label} style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>{f.label}</label>
+                <input value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.placeholder} style={inputStyle} />
+              </div>
+            ))}
 
-        <button onClick={submitSetup} disabled={submitting} className="btn-primary" style={{ width: '100%', fontSize: 15, padding: 14, opacity: submitting ? 0.6 : 1, marginTop: 8 }}>
-          {submitting ? '⏳ Publicando...' : '🚀 Publicar en el Feed'}
-        </button>
+            <button onClick={submitSetup} disabled={submitting} className="btn-primary" style={{ width: '100%', fontSize: 15, padding: 14, opacity: submitting ? 0.6 : 1, marginTop: 8 }}>
+              {submitting ? '⏳ Publicando...' : '🚀 Publicar en el Feed'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
