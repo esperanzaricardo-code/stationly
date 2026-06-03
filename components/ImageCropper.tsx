@@ -22,24 +22,21 @@ export default function ImageCropper({ src, onCrop, onCancel }: Props) {
   const PREVIEW_W = 480
   const PREVIEW_H = Math.round(PREVIEW_W / ASPECT)
 
-  // Minimum scale: image fits entirely inside the frame (letterbox)
-  const fitScale = useRef(1)
+  const fitScaleW = useRef(1) // scale so image width = preview width
 
   useEffect(() => {
     const img = new window.Image()
     img.onload = () => {
       imgRef.current = img
-      const naturalW = img.naturalWidth
-      const naturalH = img.naturalHeight
-      // Fit inside (not cover) — image fully visible
-      const scaleToFit = Math.min(PREVIEW_W / naturalW, PREVIEW_H / naturalH)
-      fitScale.current = scaleToFit
-      const displayW = naturalW * scaleToFit
-      const displayH = naturalH * scaleToFit
+      // Min scale = image width fills the preview width exactly
+      const scaleW = PREVIEW_W / img.naturalWidth
+      fitScaleW.current = scaleW
+      const displayW = img.naturalWidth * scaleW
+      const displayH = img.naturalHeight * scaleW
       setImgSize({ w: displayW, h: displayH })
-      setScale(scaleToFit)
-      // Center the image
-      setOffset({ x: (PREVIEW_W - displayW) / 2, y: (PREVIEW_H - displayH) / 2 })
+      setScale(scaleW)
+      // Center vertically
+      setOffset({ x: 0, y: (PREVIEW_H - displayH) / 2 })
     }
     img.src = src
   }, [src])
@@ -49,13 +46,19 @@ export default function ImageCropper({ src, onCrop, onCancel }: Props) {
     if (!canvas || !imgRef.current) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    // Background fill
     ctx.fillStyle = '#0a0a0b'
     ctx.fillRect(0, 0, PREVIEW_W, PREVIEW_H)
     ctx.drawImage(imgRef.current, offset.x, offset.y, imgSize.w, imgSize.h)
   }, [offset, imgSize])
 
   useEffect(() => { draw() }, [draw])
+
+  // When at min zoom, clamp x so image never leaves left/right edges
+  // but allow free vertical movement (image can float above/below)
+  function clampOffset(x: number, y: number, w: number) {
+    const clampedX = Math.min(0, Math.max(PREVIEW_W - w, x))
+    return { x: clampedX, y }
+  }
 
   function onMouseDown(e: React.MouseEvent) {
     setDragging(true)
@@ -66,7 +69,7 @@ export default function ImageCropper({ src, onCrop, onCancel }: Props) {
     if (!dragging) return
     const dx = e.clientX - dragStart.current.mx
     const dy = e.clientY - dragStart.current.my
-    setOffset({ x: dragStart.current.ox + dx, y: dragStart.current.oy + dy })
+    setOffset(clampOffset(dragStart.current.ox + dx, dragStart.current.oy + dy, imgSize.w))
   }
 
   function onMouseUp() { setDragging(false) }
@@ -80,7 +83,7 @@ export default function ImageCropper({ src, onCrop, onCancel }: Props) {
     const t = e.touches[0]
     const dx = t.clientX - dragStart.current.mx
     const dy = t.clientY - dragStart.current.my
-    setOffset({ x: dragStart.current.ox + dx, y: dragStart.current.oy + dy })
+    setOffset(clampOffset(dragStart.current.ox + dx, dragStart.current.oy + dy, imgSize.w))
   }
 
   function handleZoom(e: React.ChangeEvent<HTMLInputElement>) {
@@ -88,13 +91,14 @@ export default function ImageCropper({ src, onCrop, onCancel }: Props) {
     if (!imgRef.current) return
     const newW = imgRef.current.naturalWidth * newScale
     const newH = imgRef.current.naturalHeight * newScale
-    // Keep centered when zooming
-    setOffset(prev => ({
-      x: prev.x - (newW - imgSize.w) / 2,
-      y: prev.y - (newH - imgSize.h) / 2,
-    }))
+    const newOffset = clampOffset(
+      offset.x - (newW - imgSize.w) / 2,
+      offset.y - (newH - imgSize.h) / 2,
+      newW
+    )
     setScale(newScale)
     setImgSize({ w: newW, h: newH })
+    setOffset(newOffset)
   }
 
   function handleCrop() {
@@ -113,16 +117,15 @@ export default function ImageCropper({ src, onCrop, onCancel }: Props) {
     onCrop(out.toDataURL('image/jpeg', 0.92))
   }
 
-  const minScale = fitScale.current * 0.4 // allow zooming out to 40% of fit
-  const maxScale = fitScale.current * 3
+  const minScale = fitScaleW.current       // min: image fills width exactly
+  const maxScale = fitScaleW.current * 3   // max: 3x zoom in
 
   return (
     <div style={{ marginBottom: 20 }}>
       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span>✦</span> Ajusta el encuadre — arrastra para mover, zoom para ajustar el tamaño
+        <span>✦</span> Arrastra para mover · zoom para ajustar
       </div>
 
-      {/* Canvas */}
       <div
         style={{
           width: '100%', aspectRatio: '4/3',
@@ -146,7 +149,6 @@ export default function ImageCropper({ src, onCrop, onCancel }: Props) {
           height={PREVIEW_H}
           style={{ width: '100%', height: '100%', display: 'block' }}
         />
-        {/* Grid overlay */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
           backgroundImage: `
@@ -157,7 +159,6 @@ export default function ImageCropper({ src, onCrop, onCancel }: Props) {
         }} />
       </div>
 
-      {/* Zoom slider */}
       <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>🔍− Zoom +</span>
         <input
@@ -171,7 +172,6 @@ export default function ImageCropper({ src, onCrop, onCancel }: Props) {
         />
       </div>
 
-      {/* Buttons */}
       <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
         <button onClick={handleCrop} className="btn-primary" style={{ flex: 1, fontSize: 13, padding: '10px' }}>
           ✓ Aplicar encuadre
