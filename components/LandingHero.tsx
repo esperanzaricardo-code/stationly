@@ -40,7 +40,7 @@ export default function LandingHero({ setupCount, totalLikes }: { setupCount: nu
       {/* Title */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{
-          fontFamily: "'Space Grotesk', sans-serif",
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
           fontSize: 'clamp(32px, 4.8vw, 62px)',
           fontWeight: 700,
           lineHeight: 1.12,
@@ -51,7 +51,7 @@ export default function LandingHero({ setupCount, totalLikes }: { setupCount: nu
           El setup de los mejores
         </h1>
         <div style={{
-          fontFamily: "'Space Grotesk', sans-serif",
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
           fontSize: 'clamp(32px, 4.8vw, 62px)',
           fontWeight: 700,
           lineHeight: 1.3,
@@ -97,7 +97,7 @@ export default function LandingHero({ setupCount, totalLikes }: { setupCount: nu
         ].map(({ num, label }) => (
           <div key={label} style={{ textAlign: 'center' }}>
             <div style={{
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
               fontSize: 30, fontWeight: 700, letterSpacing: '-0.5px',
               background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
@@ -123,7 +123,7 @@ export default function LandingHero({ setupCount, totalLikes }: { setupCount: nu
             borderRadius: 'var(--radius)', padding: '24px 20px', textAlign: 'center',
           }}>
             <div style={{ fontSize: 30, marginBottom: 10 }}>{step.icon}</div>
-            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>{step.title}</div>
+            <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>{step.title}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>{step.desc}</div>
           </div>
         ))}
