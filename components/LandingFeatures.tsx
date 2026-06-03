@@ -1,4 +1,5 @@
-export default function LandingFeatures() {
+use client
+  export default function LandingFeatures() {
   const features = [
     {
       icon: '📸',
