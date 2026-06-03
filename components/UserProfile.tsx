@@ -104,7 +104,7 @@ export default function UserProfile({ setups, username }: Props) {
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto', scrollbarWidth: 'none' }}>
           {setups.map((s, i) => (
             <button key={s.id} onClick={() => setActiveSetup(i)} style={{
-              flexShrink: 0, padding: '7px 16px', borderRadius: 50, border: 'none',
+              flexShrink: 0, padding: '7px 16px', borderRadius: 50,
             background: activeSetup === i ? 'linear-gradient(135deg, #CFFA7C, #9CE89D)' : 'var(--surface2)',
 border: activeSetup === i ? 'none' : '1px solid var(--border)',
 color: activeSetup === i ? '#0a0a0b' : 'var(--text-muted)',
