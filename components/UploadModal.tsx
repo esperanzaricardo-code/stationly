@@ -125,7 +125,7 @@ export default function UploadModal() {
     try {
       const tags = tagsInput.trim()
         ? tagsInput.split(',').map(t => t.trim()).filter(Boolean).slice(0, 10)
-        : ['Custom Setup']
+        : []
       const category = autoCategory(tags)
       const fd = new FormData()
       fd.append('user_name', userName.trim())
