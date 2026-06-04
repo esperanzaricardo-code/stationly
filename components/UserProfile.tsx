@@ -1,7 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Setup } from '@/lib/supabase'
+import { Setup, Component, ShopLink } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 
 const AVATAR_GRADIENTS = [
   ['#CFFA7C','#9CE89D'], ['#f43f5e','#fb923c'], ['#06b6d4','#6366f1'],
@@ -20,10 +21,12 @@ function getAvatarGradient(user: string) {
   return `linear-gradient(135deg, ${a}, ${b})`
 }
 
-function makeAmazonLink(component: string) {
+function makeDefaultLink(component: string, shop: string) {
   const query = encodeURIComponent(component)
-  // When affiliate ID is ready, add: &tag=YOUR_AFFILIATE_ID
-  return `https://www.amazon.es/s?k=${query}`
+  if (shop === 'Amazon') return `https://www.amazon.es/s?k=${query}`
+  if (shop === 'PcComponentes') return `https://www.pccomponentes.com/buscar/?query=${query}`
+  if (shop === 'MediaMarkt') return `https://www.mediamarkt.es/es/search.html?query=${query}`
+  return ''
 }
 
 function totalLikes(setups: Setup[]) {
@@ -31,35 +34,253 @@ function totalLikes(setups: Setup[]) {
 }
 
 function totalComponents(setups: Setup[]) {
-  return setups.reduce((a, s) => a + (s.tags?.length || 0), 0)
+  return setups.reduce((a, s) => a + (s.tags?.length || 0) + (s.components?.length || 0), 0)
 }
+
+const SHOPS = ['Amazon', 'PcComponentes', 'MediaMarkt', 'Otro'] as const
 
 type Props = { setups: Setup[]; username: string }
 
-export default function UserProfile({ setups, username }: Props) {
+export default function UserProfile({ setups: initialSetups, username }: Props) {
+  const [setups, setSetups] = useState(initialSetups)
   const [activeSetup, setActiveSetup] = useState(0)
+  const [isOwner, setIsOwner] = useState(false)
+  const [sessionToken, setSessionToken] = useState('')
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  // Edición título
+  const [editTitle, setEditTitle] = useState('')
+
+  // Edición foto
+  const [newImageFile, setNewImageFile] = useState<File | null>(null)
+  const [newImagePreview, setNewImagePreview] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  // Edición tags (periféricos)
+  const [editTags, setEditTags] = useState<Component[]>([])
+
+  // Edición components (internos)
+  const [editComponents, setEditComponents] = useState<Component[]>([])
+
   const setup = setups[activeSetup]
 
   const PLACEHOLDER_COLORS = [
-    ['#1a1a2e','#16213e','#0f3460'], ['#0d0d0d','#1a0a2e','#2a0a4e'],
+    ['#1a1a2e','#16213e','#0f3460'],
+    ['#0d0d0d','#1a0a2e','#2a0a4e'],
     ['#0a1628','#0e2040','#1a3a6e'],
   ]
   const pc = PLACEHOLDER_COLORS[hashStr(username) % PLACEHOLDER_COLORS.length]
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user
+      if (user) {
+        const uname = user.user_metadata?.username || user.email?.split('@')[0] || ''
+        setIsOwner(uname.toLowerCase() === username.toLowerCase())
+        setSessionToken(data.session?.access_token || '')
+      }
+    })
+  }, [username])
+
+  function startEditing() {
+    setEditTitle(setup.title)
+    setEditTags(setup.tags ? setup.tags.map(t =>
+      typeof t === 'string'
+        ? { name: t, type: 'peripheral', links: [] }
+        : { ...t, links: t.links || [] }
+    ) : [])
+    setEditComponents(setup.components ? setup.components.map(c => ({ ...c, links: c.links || [] })) : [])
+    setNewImageFile(null)
+    setNewImagePreview(null)
+    setEditing(true)
+  }
+
+  function cancelEditing() {
+    setEditing(false)
+    setNewImageFile(null)
+    setNewImagePreview(null)
+  }
+
+  function handleImageFile(file: File) {
+    if (!file.type.startsWith('image/')) return
+    if (file.size > 10 * 1024 * 1024) { alert('Máximo 10MB'); return }
+    setNewImageFile(file)
+    const reader = new FileReader()
+    reader.onload = e => setNewImagePreview(e.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  // Tags (periféricos)
+  function updateTagName(i: number, name: string) {
+    setEditTags(prev => prev.map((t, j) => j === i ? { ...t, name } : t))
+  }
+  function addTagLink(i: number) {
+    setEditTags(prev => prev.map((t, j) => j === i ? { ...t, links: [...t.links, { shop: 'Amazon', url: '' }] } : t))
+  }
+  function updateTagLink(i: number, li: number, field: keyof ShopLink, value: string) {
+    setEditTags(prev => prev.map((t, j) => j === i ? {
+      ...t,
+      links: t.links.map((l, k) => k === li ? { ...l, [field]: value } : l)
+    } : t))
+  }
+  function removeTagLink(i: number, li: number) {
+    setEditTags(prev => prev.map((t, j) => j === i ? { ...t, links: t.links.filter((_, k) => k !== li) } : t))
+  }
+  function removeTag(i: number) {
+    setEditTags(prev => prev.filter((_, j) => j !== i))
+  }
+  function addTag() {
+    setEditTags(prev => [...prev, { name: '', type: 'peripheral', links: [] }])
+  }
+
+  // Components (internos)
+  function updateComponentName(i: number, name: string) {
+    setEditComponents(prev => prev.map((c, j) => j === i ? { ...c, name } : c))
+  }
+  function addComponentLink(i: number) {
+    setEditComponents(prev => prev.map((c, j) => j === i ? { ...c, links: [...c.links, { shop: 'Amazon', url: '' }] } : c))
+  }
+  function updateComponentLink(i: number, li: number, field: keyof ShopLink, value: string) {
+    setEditComponents(prev => prev.map((c, j) => j === i ? {
+      ...c,
+      links: c.links.map((l, k) => k === li ? { ...l, [field]: value } : l)
+    } : c))
+  }
+  function removeComponentLink(i: number, li: number) {
+    setEditComponents(prev => prev.map((c, j) => j === i ? { ...c, links: c.links.filter((_, k) => k !== li) } : c))
+  }
+  function removeComponent(i: number) {
+    setEditComponents(prev => prev.filter((_, j) => j !== i))
+  }
+  function addComponent() {
+    setEditComponents(prev => [...prev, { name: '', type: 'internal', links: [] }])
+  }
+
+  async function saveChanges() {
+    setSaving(true)
+    try {
+      let image_url = setup.image_url
+
+      // Subir nueva imagen si hay
+      if (newImageFile) {
+        const arrayBuffer = await newImageFile.arrayBuffer()
+        const buffer = new Uint8Array(arrayBuffer)
+        const ext = newImageFile.name.split('.').pop() || 'jpg'
+        const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('setups').upload(filename, buffer, { contentType: newImageFile.type, upsert: false })
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('setups').getPublicUrl(filename)
+          image_url = urlData.publicUrl
+        }
+      }
+
+      const updates = {
+        title: editTitle,
+        tags: editTags.filter(t => t.name.trim()),
+        components: editComponents.filter(c => c.name.trim()),
+        image_url,
+      }
+
+      const res = await fetch('/api/setups', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupId: setup.id, sessionToken, updates }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      setSetups(prev => prev.map((s, i) => i === activeSetup ? { ...s, ...updates, image_url: image_url ?? s.image_url } : s))
+      setEditing(false)
+      setNewImageFile(null)
+      setNewImagePreview(null)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Error al guardar')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   function copyLink() {
     navigator.clipboard.writeText(window.location.href)
     alert('¡Link copiado!')
   }
 
+  const inputStyle = {
+    background: 'var(--surface2)', border: '1px solid var(--border)',
+    color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 13,
+    padding: '8px 12px', borderRadius: 'var(--radius-sm)', outline: 'none', width: '100%',
+  }
+
+  function ComponentEditor({
+    items, onUpdateName, onAddLink, onUpdateLink, onRemoveLink, onRemove, onAdd,
+    addLabel, placeholder,
+  }: {
+    items: Component[]
+    onUpdateName: (i: number, v: string) => void
+    onAddLink: (i: number) => void
+    onUpdateLink: (i: number, li: number, field: keyof ShopLink, value: string) => void
+    onRemoveLink: (i: number, li: number) => void
+    onRemove: (i: number) => void
+    onAdd: () => void
+    addLabel: string
+    placeholder: string
+  }) {
+    return (
+      <div>
+        {items.map((item, i) => (
+          <div key={i} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <input
+                value={item.name}
+                onChange={e => onUpdateName(i, e.target.value)}
+                placeholder={placeholder}
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <button onClick={() => onRemove(i)} style={{ background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', borderRadius: 'var(--radius-sm)', padding: '8px 12px', cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>
+                ✕
+              </button>
+            </div>
+
+            {item.links.map((link, li) => (
+              <div key={li} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                <select
+                  value={link.shop}
+                  onChange={e => onUpdateLink(i, li, 'shop', e.target.value)}
+                  style={{ ...inputStyle, width: 'auto', flexShrink: 0 }}
+                >
+                  {SHOPS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <input
+                  value={link.url}
+                  onChange={e => onUpdateLink(i, li, 'url', e.target.value)}
+                  placeholder="https://..."
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <button onClick={() => onRemoveLink(i, li)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', cursor: 'pointer', flexShrink: 0 }}>
+                  ✕
+                </button>
+              </div>
+            ))}
+
+            <button onClick={() => onAddLink(i)} style={{ background: 'transparent', border: '1px dashed var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '6px 12px', cursor: 'pointer', fontSize: 12, width: '100%', marginTop: 4 }}>
+              + Añadir link de compra
+            </button>
+          </div>
+        ))}
+        <button onClick={onAdd} style={{ background: 'var(--tag-bg)', border: '1px dashed var(--tag-border)', color: 'var(--tag-text)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 700, width: '100%', fontFamily: 'var(--font-display)' }}>
+          + {addLabel}
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
 
       {/* ── Profile header ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 20,
-        marginBottom: 36, flexWrap: 'wrap',
-      }}>
-        {/* Avatar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 36, flexWrap: 'wrap' }}>
         <div style={{
           width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
           background: getAvatarGradient(username),
@@ -71,12 +292,8 @@ export default function UserProfile({ setups, username }: Props) {
           {username.slice(0, 2).toUpperCase()}
         </div>
 
-        {/* Name + stats */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{
-            fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800,
-            letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4,
-          }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4 }}>
             {username}
           </h1>
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
@@ -93,27 +310,106 @@ export default function UserProfile({ setups, username }: Props) {
           </div>
         </div>
 
-        {/* Share button */}
-        <button onClick={copyLink} className="btn-primary" style={{ fontSize: 13, padding: '9px 18px', flexShrink: 0 }}>
-          🔗 Copiar link
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          {isOwner && !editing && (
+            <button onClick={startEditing} className="btn-secondary" style={{ fontSize: 13 }}>
+              ✏️ Editar perfil
+            </button>
+          )}
+          <button onClick={copyLink} className="btn-primary" style={{ fontSize: 13, padding: '9px 18px' }}>
+            🔗 Copiar link
+          </button>
+        </div>
       </div>
 
-      {/* ── Setup tabs (if multiple) ── */}
+      {/* ── Setup tabs ── */}
       {setups.length > 1 && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto', scrollbarWidth: 'none' }}>
           {setups.map((s, i) => (
-            <button key={s.id} onClick={() => setActiveSetup(i)} style={{
+            <button key={s.id} onClick={() => { setActiveSetup(i); setEditing(false) }} style={{
               flexShrink: 0, padding: '7px 16px', borderRadius: 50,
-            background: activeSetup === i ? 'linear-gradient(135deg, #CFFA7C, #9CE89D)' : 'var(--surface2)',
-border: activeSetup === i ? 'none' : '1px solid var(--border)',
-color: activeSetup === i ? '#0a0a0b' : 'var(--text-muted)',
-fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-cursor: 'pointer', transition: 'all 0.18s',
-} as React.CSSProperties}>
+              background: activeSetup === i ? 'linear-gradient(135deg, #CFFA7C, #9CE89D)' : 'var(--surface2)',
+              border: activeSetup === i ? 'none' : '1px solid var(--border)',
+              color: activeSetup === i ? '#0a0a0b' : 'var(--text-muted)',
+              fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', transition: 'all 0.18s',
+            } as React.CSSProperties}>
               {s.title}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* ── MODO EDICIÓN ── */}
+      {editing && isOwner && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--accent)', borderRadius: 'var(--radius)', padding: 28, marginBottom: 28 }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>
+            ✏️ Editando: {setup.title}
+          </h2>
+
+          {/* Título */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Título del Setup</label>
+            <input value={editTitle} onChange={e => setEditTitle(e.target.value)} style={inputStyle} />
+          </div>
+
+          {/* Foto */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Foto del Setup</label>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleImageFile(e.target.files[0])} />
+            {newImagePreview ? (
+              <div style={{ position: 'relative', borderRadius: 'var(--radius-sm)', overflow: 'hidden', marginBottom: 8 }}>
+                <img src={newImagePreview} alt="Nueva foto" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' }} />
+                <button onClick={() => { setNewImageFile(null); setNewImagePreview(null) }} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', width: 28, height: 28, borderRadius: '50%', fontSize: 14, cursor: 'pointer' }}>✕</button>
+              </div>
+            ) : (
+              <button onClick={() => fileRef.current?.click()} style={{ background: 'var(--surface2)', border: '2px dashed var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '20px', cursor: 'pointer', fontSize: 13, width: '100%', textAlign: 'center' }}>
+                📸 Cambiar foto
+              </button>
+            )}
+          </div>
+
+          {/* Periféricos */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>🖱️ Periféricos y Accesorios</label>
+            <ComponentEditor
+              items={editTags}
+              onUpdateName={updateTagName}
+              onAddLink={addTagLink}
+              onUpdateLink={updateTagLink}
+              onRemoveLink={removeTagLink}
+              onRemove={removeTag}
+              onAdd={addTag}
+              addLabel="Añadir periférico"
+              placeholder="Ej: Keychron K2, LG OLED..."
+            />
+          </div>
+
+          {/* Componentes internos */}
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>🔧 Componentes Internos del PC</label>
+            <ComponentEditor
+              items={editComponents}
+              onUpdateName={updateComponentName}
+              onAddLink={addComponentLink}
+              onUpdateLink={updateComponentLink}
+              onRemoveLink={removeComponentLink}
+              onRemove={removeComponent}
+              onAdd={addComponent}
+              addLabel="Añadir componente interno"
+              placeholder="Ej: RTX 4090, Ryzen 9 7950X..."
+            />
+          </div>
+
+          {/* Botones guardar/cancelar */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={saveChanges} disabled={saving} className="btn-primary" style={{ flex: 1, fontSize: 14, padding: 13, opacity: saving ? 0.6 : 1 }}>
+              {saving ? '⏳ Guardando...' : '✓ Guardar cambios'}
+            </button>
+            <button onClick={cancelEditing} className="btn-secondary" style={{ fontSize: 14, padding: '13px 20px' }}>
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
 
@@ -123,104 +419,85 @@ cursor: 'pointer', transition: 'all 0.18s',
         overflow: 'hidden', marginBottom: 28,
         border: '1px solid var(--border)',
         background: `linear-gradient(135deg, ${pc[0]}, ${pc[1]}, ${pc[2]})`,
-        position: 'relative',
-        boxShadow: 'var(--shadow-lg)',
+        position: 'relative', boxShadow: 'var(--shadow-lg)',
       }}>
         {setup.image_url ? (
-          <Image
-            src={setup.image_url} alt={setup.title} fill
-            style={{ objectFit: 'cover' }}
-            sizes="(max-width: 900px) 100vw, 900px"
-            priority
-          />
+          <Image src={setup.image_url} alt={setup.title} fill style={{ objectFit: 'cover' }} sizes="(max-width: 900px) 100vw, 900px" priority />
         ) : (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
-            🖥️
-          </div>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>🖥️</div>
         )}
-        {/* Setup title overlay */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          padding: '32px 24px 20px',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
-        }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
-            {setup.title}
-          </div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
-            {setup.category} · {setup.tags?.length || 0} componentes
-          </div>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '32px 24px 20px', background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>{setup.title}</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{setup.category} · {(setup.tags?.length || 0) + (setup.components?.length || 0)} componentes</div>
         </div>
       </div>
 
-      {/* ── Components list ── */}
+      {/* ── Periféricos ── */}
       {setup.tags && setup.tags.length > 0 && (
-        <div>
-          <h2 style={{
-            fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800,
-            color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16,
-          }}>
-            🛒 Componentes del Setup
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>
+            🖱️ Periféricos y Accesorios
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {setup.tags.map((tag, i) => (
-              <a
-                key={i}
-                href={makeAmazonLink(tag)}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  background: 'var(--surface)', border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-sm)', padding: '14px 18px',
-                  textDecoration: 'none', transition: 'all 0.18s',
-                  cursor: 'pointer',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--accent)'
-                  ;(e.currentTarget as HTMLAnchorElement).style.transform = 'translateX(4px)'
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--border)'
-                  ;(e.currentTarget as HTMLAnchorElement).style.transform = 'none'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-                    background: 'var(--tag-bg)', border: '1px solid var(--tag-border)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 16,
-                  }}>
-                    🖥️
+            {setup.tags.map((tag, i) => {
+              const name = typeof tag === 'string' ? tag : tag.name
+              const links = typeof tag === 'string' ? [] : (tag.links || [])
+              const displayLinks = links.length > 0 ? links : [{ shop: 'Amazon', url: makeDefaultLink(name, 'Amazon') }]
+              return (
+                <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: links.length > 1 ? 10 : 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🖱️</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{name}</div>
                   </div>
-                  <div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
-                      {tag}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                      Ver en Amazon →
-                    </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                    {displayLinks.map((link, li) => (
+                      <a key={li} href={link.url} target="_blank" rel="noopener noreferrer" style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none', letterSpacing: '0.3px' }}>
+                        {link.shop} →
+                      </a>
+                    ))}
                   </div>
                 </div>
-                <div style={{
-                  background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
-                  color: '#0a0a0b', fontSize: 10, fontWeight: 700,
-                  padding: '4px 10px', borderRadius: 50, letterSpacing: '0.5px',
-                  flexShrink: 0,
-                }}>
-                  AMAZON
-                </div>
-              </a>
-            ))}
+              )
+            })}
           </div>
-
-          {/* Affiliate disclaimer */}
-          <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.5 }}>
-            Los links llevan a Amazon. Si compras a través de ellos podemos recibir una pequeña comisión sin coste adicional para ti.
-          </p>
         </div>
       )}
+
+      {/* ── Componentes internos ── */}
+      {setup.components && setup.components.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>
+            🔧 Componentes Internos del PC
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {setup.components.map((comp, i) => {
+              const links = comp.links || []
+              const displayLinks = links.length > 0 ? links : [{ shop: 'Amazon', url: makeDefaultLink(comp.name, 'Amazon') }]
+              return (
+                <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🔧</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{comp.name}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {displayLinks.map((link, li) => (
+                      <a key={li} href={link.url} target="_blank" rel="noopener noreferrer" style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none', letterSpacing: '0.3px' }}>
+                        {link.shop} →
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Disclaimer */}
+      <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.5 }}>
+        Los links llevan a tiendas externas. Si compras a través de ellos podemos recibir una pequeña comisión sin coste adicional para ti.
+      </p>
+
     </div>
   )
 }
