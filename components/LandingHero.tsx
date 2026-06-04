@@ -69,7 +69,9 @@ export default function LandingHero() {
         color: 'var(--text-muted)', fontSize: 'clamp(15px, 2vw, 18px)', fontWeight: 300,
         maxWidth: 520, margin: '0 auto 40px', lineHeight: 1.65,
       }}>
-Sube tu setup, añade tus componentes con IA y comparte el link en tu bio. Tus viewers y seguidores descubren exactamente con qué trabajas y juegas.
+        Sube tu setup, añade tus componentes con IA y comparte el link en tu bio. Tus viewers y seguidores descubren exactamente con qué trabajas y juegas.
+      </p>
+
       {/* CTA */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 64, flexWrap: 'wrap' }}>
         <Link href="/login" className="btn-primary" style={{ fontSize: 15, padding: '14px 32px' }}>
@@ -84,8 +86,8 @@ Sube tu setup, añade tus componentes con IA y comparte el link en tu bio. Tus v
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(24px, 5vw, 56px)', flexWrap: 'wrap' }}>
         {[
           { num: '100%', label: 'Gratis para siempre' },
-{ num: '✦', label: 'IA integrada' },
-      { num: '🔗', label: 'Link para tu bio' },
+          { num: '✦', label: 'IA integrada' },
+          { num: '🔗', label: 'Link para tu bio' },
         ].map(({ num, label }) => (
           <div key={label} style={{ textAlign: 'center' }}>
             <div style={{
