@@ -34,7 +34,14 @@ function totalLikes(setups: Setup[]) {
 }
 
 function totalComponents(setups: Setup[]) {
-  return setups.reduce((a, s) => a + (s.tags?.length || 0) + (s.components?.length || 0), 0)
+  return setups.reduce((a, s) => {
+    const tags = (s.tags || []).filter(t => {
+      const name = typeof t === 'string' ? t : t.name
+      return name && name !== 'Custom Setup'
+    })
+    const components = (s.components || []).filter(c => c.name && c.name.trim())
+    return a + tags.length + components.length
+  }, 0)
 }
 
 const SHOPS = ['Amazon', 'PcComponentes', 'MediaMarkt', 'Otro'] as const
@@ -43,69 +50,27 @@ type Props = { setups: Setup[]; username: string }
 
 export default function UserProfile({ setups: initialSetups, username }: Props) {
   const [setups, setSetups] = useState(initialSetups)
-
-  if (setups.length === 0) {
-    return (
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 36 }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
-            background: getAvatarGradient(username),
-            fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#0a0a0b', border: '3px solid var(--accent)',
-            boxShadow: '0 0 20px var(--accent-glow)',
-          }}>
-            {username.slice(0, 2).toUpperCase()}
-          </div>
-          <div>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4 }}>
-              {username}
-            </h1>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>0 Setups · 0 Componentes · 0 Likes</div>
-          </div>
-        </div>
-        <div style={{
-          textAlign: 'center', padding: '60px 24px',
-          background: 'var(--surface)', border: '1px dashed var(--border)',
-          borderRadius: 'var(--radius)',
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🖥️</div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>
-            Aún no hay ningún setup
-          </h2>
-          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>
-            Sube tu primer setup y muéstrale al mundo cómo juegas.
-          </p>
-          <button
-            className="btn-primary"
-            onClick={() => document.dispatchEvent(new CustomEvent('stationly:open-upload'))}
-            style={{ fontSize: 14, padding: '11px 24px' }}
-          >
-            📸 Subir mi primer setup
-          </button>
-        </div>
-      </div>
-    )
-  }
   const [activeSetup, setActiveSetup] = useState(0)
   const [isOwner, setIsOwner] = useState(false)
   const [sessionToken, setSessionToken] = useState('')
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // Edición título
-  const [editTitle, setEditTitle] = useState('')
+  // Likes
+  const [likes, setLikes] = useState<Record<string, number>>({})
+  const [liked, setLiked] = useState<Record<string, boolean>>({})
+  const [likingLoading, setLikingLoading] = useState<Record<string, boolean>>({})
 
-  // Edición foto
+  // Reporte
+  const [reported, setReported] = useState<Record<string, boolean>>({})
+  const [showReport, setShowReport] = useState<Record<string, boolean>>({})
+
+  // Edición
+  const [editTitle, setEditTitle] = useState('')
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-
-  // Edición tags (periféricos)
   const [editTags, setEditTags] = useState<Component[]>([])
-
-  // Edición components (internos)
   const [editComponents, setEditComponents] = useState<Component[]>([])
 
   const setup = setups[activeSetup]
@@ -126,7 +91,46 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         setSessionToken(data.session?.access_token || '')
       }
     })
-  }, [username])
+    // Inicializar likes desde los setups
+    const initialLikes: Record<string, number> = {}
+    initialSetups.forEach(s => { initialLikes[s.id] = s.likes || 0 })
+    setLikes(initialLikes)
+  }, [username, initialSetups])
+
+  async function toggleLike(setupId: string) {
+    if (likingLoading[setupId]) return
+    setLikingLoading(prev => ({ ...prev, [setupId]: true }))
+    const newLiked = !liked[setupId]
+    setLiked(prev => ({ ...prev, [setupId]: newLiked }))
+    setLikes(prev => ({ ...prev, [setupId]: (prev[setupId] || 0) + (newLiked ? 1 : -1) }))
+    try {
+      const res = await fetch('/api/likes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: setupId, action: newLiked ? 'like' : 'unlike' }),
+      })
+      const data = await res.json()
+      if (data.likes !== undefined) setLikes(prev => ({ ...prev, [setupId]: data.likes }))
+    } catch {
+      setLiked(prev => ({ ...prev, [setupId]: !newLiked }))
+      setLikes(prev => ({ ...prev, [setupId]: (prev[setupId] || 0) + (newLiked ? -1 : 1) }))
+    } finally {
+      setLikingLoading(prev => ({ ...prev, [setupId]: false }))
+    }
+  }
+
+  async function handleReport(setupId: string, userName: string) {
+    if (reported[setupId]) return
+    try {
+      await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: setupId, user: userName }),
+      })
+    } catch {}
+    setReported(prev => ({ ...prev, [setupId]: true }))
+    setShowReport(prev => ({ ...prev, [setupId]: false }))
+  }
 
   function startEditing() {
     setEditTitle(setup.title)
@@ -156,7 +160,6 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
     reader.readAsDataURL(file)
   }
 
-  // Tags (periféricos)
   function updateTagName(i: number, name: string) {
     setEditTags(prev => prev.map((t, j) => j === i ? { ...t, name } : t))
   }
@@ -165,21 +168,15 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
   }
   function updateTagLink(i: number, li: number, field: keyof ShopLink, value: string) {
     setEditTags(prev => prev.map((t, j) => j === i ? {
-      ...t,
-      links: t.links.map((l, k) => k === li ? { ...l, [field]: value } : l)
+      ...t, links: t.links.map((l, k) => k === li ? { ...l, [field]: value } : l)
     } : t))
   }
   function removeTagLink(i: number, li: number) {
     setEditTags(prev => prev.map((t, j) => j === i ? { ...t, links: t.links.filter((_, k) => k !== li) } : t))
   }
-  function removeTag(i: number) {
-    setEditTags(prev => prev.filter((_, j) => j !== i))
-  }
-  function addTag() {
-    setEditTags(prev => [...prev, { name: '', type: 'peripheral', links: [] }])
-  }
+  function removeTag(i: number) { setEditTags(prev => prev.filter((_, j) => j !== i)) }
+  function addTag() { setEditTags(prev => [...prev, { name: '', type: 'peripheral', links: [] }]) }
 
-  // Components (internos)
   function updateComponentName(i: number, name: string) {
     setEditComponents(prev => prev.map((c, j) => j === i ? { ...c, name } : c))
   }
@@ -188,26 +185,19 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
   }
   function updateComponentLink(i: number, li: number, field: keyof ShopLink, value: string) {
     setEditComponents(prev => prev.map((c, j) => j === i ? {
-      ...c,
-      links: c.links.map((l, k) => k === li ? { ...l, [field]: value } : l)
+      ...c, links: c.links.map((l, k) => k === li ? { ...l, [field]: value } : l)
     } : c))
   }
   function removeComponentLink(i: number, li: number) {
     setEditComponents(prev => prev.map((c, j) => j === i ? { ...c, links: c.links.filter((_, k) => k !== li) } : c))
   }
-  function removeComponent(i: number) {
-    setEditComponents(prev => prev.filter((_, j) => j !== i))
-  }
-  function addComponent() {
-    setEditComponents(prev => [...prev, { name: '', type: 'internal', links: [] }])
-  }
+  function removeComponent(i: number) { setEditComponents(prev => prev.filter((_, j) => j !== i)) }
+  function addComponent() { setEditComponents(prev => [...prev, { name: '', type: 'internal', links: [] }]) }
 
   async function saveChanges() {
     setSaving(true)
     try {
       let image_url = setup.image_url
-
-      // Subir nueva imagen si hay
       if (newImageFile) {
         const arrayBuffer = await newImageFile.arrayBuffer()
         const buffer = new Uint8Array(arrayBuffer)
@@ -220,14 +210,12 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
           image_url = urlData.publicUrl
         }
       }
-
       const updates = {
         title: editTitle,
         tags: editTags.filter(t => t.name.trim()),
         components: editComponents.filter(c => c.name.trim()),
         image_url,
       }
-
       const res = await fetch('/api/setups', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -235,7 +223,6 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-
       setSetups(prev => prev.map((s, i) => i === activeSetup ? { ...s, ...updates, image_url: image_url ?? s.image_url } : s))
       setEditing(false)
       setNewImageFile(null)
@@ -258,10 +245,7 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
     padding: '8px 12px', borderRadius: 'var(--radius-sm)', outline: 'none', width: '100%',
   }
 
-  function ComponentEditor({
-    items, onUpdateName, onAddLink, onUpdateLink, onRemoveLink, onRemove, onAdd,
-    addLabel, placeholder,
-  }: {
+  function ComponentEditor({ items, onUpdateName, onAddLink, onUpdateLink, onRemoveLink, onRemove, onAdd, addLabel, placeholder }: {
     items: Component[]
     onUpdateName: (i: number, v: string) => void
     onAddLink: (i: number) => void
@@ -277,38 +261,18 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         {items.map((item, i) => (
           <div key={i} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              <input
-                value={item.name}
-                onChange={e => onUpdateName(i, e.target.value)}
-                placeholder={placeholder}
-                style={{ ...inputStyle, flex: 1 }}
-              />
-              <button onClick={() => onRemove(i)} style={{ background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', borderRadius: 'var(--radius-sm)', padding: '8px 12px', cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>
-                ✕
-              </button>
+              <input value={item.name} onChange={e => onUpdateName(i, e.target.value)} placeholder={placeholder} style={{ ...inputStyle, flex: 1 }} />
+              <button onClick={() => onRemove(i)} style={{ background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', borderRadius: 'var(--radius-sm)', padding: '8px 12px', cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>✕</button>
             </div>
-
             {item.links.map((link, li) => (
               <div key={li} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                <select
-                  value={link.shop}
-                  onChange={e => onUpdateLink(i, li, 'shop', e.target.value)}
-                  style={{ ...inputStyle, width: 'auto', flexShrink: 0 }}
-                >
+                <select value={link.shop} onChange={e => onUpdateLink(i, li, 'shop', e.target.value)} style={{ ...inputStyle, width: 'auto', flexShrink: 0 }}>
                   {SHOPS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <input
-                  value={link.url}
-                  onChange={e => onUpdateLink(i, li, 'url', e.target.value)}
-                  placeholder="https://..."
-                  style={{ ...inputStyle, flex: 1 }}
-                />
-                <button onClick={() => onRemoveLink(i, li)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', cursor: 'pointer', flexShrink: 0 }}>
-                  ✕
-                </button>
+                <input value={link.url} onChange={e => onUpdateLink(i, li, 'url', e.target.value)} placeholder="https://..." style={{ ...inputStyle, flex: 1 }} />
+                <button onClick={() => onRemoveLink(i, li)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', cursor: 'pointer', flexShrink: 0 }}>✕</button>
               </div>
             ))}
-
             <button onClick={() => onAddLink(i)} style={{ background: 'transparent', border: '1px dashed var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '6px 12px', cursor: 'pointer', fontSize: 12, width: '100%', marginTop: 4 }}>
               + Añadir link de compra
             </button>
@@ -321,26 +285,41 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
     )
   }
 
+  // Estado vacío
+  if (setups.length === 0) {
+    return (
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 36 }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', flexShrink: 0, background: getAvatarGradient(username), fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0b', border: '3px solid var(--accent)', boxShadow: '0 0 20px var(--accent-glow)' }}>
+            {username.slice(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4 }}>{username}</h1>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>0 Setups · 0 Componentes · 0 Likes</div>
+          </div>
+        </div>
+        <div style={{ textAlign: 'center', padding: '60px 24px', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🖥️</div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>Aún no hay ningún setup</h2>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>Sube tu primer setup y muéstrale al mundo cómo juegas.</p>
+          <button className="btn-primary" onClick={() => document.dispatchEvent(new CustomEvent('stationly:open-upload'))} style={{ fontSize: 14, padding: '11px 24px' }}>
+            📸 Subir mi primer setup
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
 
       {/* ── Profile header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 36, flexWrap: 'wrap' }}>
-        <div style={{
-          width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
-          background: getAvatarGradient(username),
-          fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#0a0a0b', border: '3px solid var(--accent)',
-          boxShadow: '0 0 20px var(--accent-glow)',
-        }}>
+        <div style={{ width: 72, height: 72, borderRadius: '50%', flexShrink: 0, background: getAvatarGradient(username), fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0b', border: '3px solid var(--accent)', boxShadow: '0 0 20px var(--accent-glow)' }}>
           {username.slice(0, 2).toUpperCase()}
         </div>
-
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4 }}>
-            {username}
-          </h1>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4 }}>{username}</h1>
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
             {[
               { num: setups.length, label: setups.length === 1 ? 'Setup' : 'Setups' },
@@ -354,16 +333,11 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
             ))}
           </div>
         </div>
-
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           {isOwner && !editing && (
-            <button onClick={startEditing} className="btn-secondary" style={{ fontSize: 13 }}>
-              ✏️ Editar perfil
-            </button>
+            <button onClick={startEditing} className="btn-secondary" style={{ fontSize: 13 }}>✏️ Editar perfil</button>
           )}
-          <button onClick={copyLink} className="btn-primary" style={{ fontSize: 13, padding: '9px 18px' }}>
-            🔗 Copiar link
-          </button>
+          <button onClick={copyLink} className="btn-primary" style={{ fontSize: 13, padding: '9px 18px' }}>🔗 Copiar link</button>
         </div>
       </div>
 
@@ -388,17 +362,13 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
       {/* ── MODO EDICIÓN ── */}
       {editing && isOwner && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--accent)', borderRadius: 'var(--radius)', padding: 28, marginBottom: 28 }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>
-            ✏️ Editando: {setup.title}
-          </h2>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>✏️ Editando: {setup.title}</h2>
 
-          {/* Título */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Título del Setup</label>
             <input value={editTitle} onChange={e => setEditTitle(e.target.value)} style={inputStyle} />
           </div>
 
-          {/* Foto */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Foto del Setup</label>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleImageFile(e.target.files[0])} />
@@ -414,58 +384,27 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
             )}
           </div>
 
-          {/* Periféricos */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>🖱️ Periféricos y Accesorios</label>
-            <ComponentEditor
-              items={editTags}
-              onUpdateName={updateTagName}
-              onAddLink={addTagLink}
-              onUpdateLink={updateTagLink}
-              onRemoveLink={removeTagLink}
-              onRemove={removeTag}
-              onAdd={addTag}
-              addLabel="Añadir periférico"
-              placeholder="Ej: Keychron K2, LG OLED..."
-            />
+            <ComponentEditor items={editTags} onUpdateName={updateTagName} onAddLink={addTagLink} onUpdateLink={updateTagLink} onRemoveLink={removeTagLink} onRemove={removeTag} onAdd={addTag} addLabel="Añadir periférico" placeholder="Ej: Keychron K2, LG OLED..." />
           </div>
 
-          {/* Componentes internos */}
           <div style={{ marginBottom: 24 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>🔧 Componentes Internos del PC</label>
-            <ComponentEditor
-              items={editComponents}
-              onUpdateName={updateComponentName}
-              onAddLink={addComponentLink}
-              onUpdateLink={updateComponentLink}
-              onRemoveLink={removeComponentLink}
-              onRemove={removeComponent}
-              onAdd={addComponent}
-              addLabel="Añadir componente interno"
-              placeholder="Ej: RTX 4090, Ryzen 9 7950X..."
-            />
+            <ComponentEditor items={editComponents} onUpdateName={updateComponentName} onAddLink={addComponentLink} onUpdateLink={updateComponentLink} onRemoveLink={removeComponentLink} onRemove={removeComponent} onAdd={addComponent} addLabel="Añadir componente interno" placeholder="Ej: RTX 4090, Ryzen 9 7950X..." />
           </div>
 
-          {/* Botones guardar/cancelar */}
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={saveChanges} disabled={saving} className="btn-primary" style={{ flex: 1, fontSize: 14, padding: 13, opacity: saving ? 0.6 : 1 }}>
               {saving ? '⏳ Guardando...' : '✓ Guardar cambios'}
             </button>
-            <button onClick={cancelEditing} className="btn-secondary" style={{ fontSize: 14, padding: '13px 20px' }}>
-              Cancelar
-            </button>
+            <button onClick={cancelEditing} className="btn-secondary" style={{ fontSize: 14, padding: '13px 20px' }}>Cancelar</button>
           </div>
         </div>
       )}
 
       {/* ── Setup image ── */}
-      <div style={{
-        width: '100%', aspectRatio: '4/3', borderRadius: 'var(--radius)',
-        overflow: 'hidden', marginBottom: 28,
-        border: '1px solid var(--border)',
-        background: `linear-gradient(135deg, ${pc[0]}, ${pc[1]}, ${pc[2]})`,
-        position: 'relative', boxShadow: 'var(--shadow-lg)',
-      }}>
+      <div style={{ width: '100%', aspectRatio: '4/3', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: 28, border: '1px solid var(--border)', background: `linear-gradient(135deg, ${pc[0]}, ${pc[1]}, ${pc[2]})`, position: 'relative', boxShadow: 'var(--shadow-lg)' }}>
         {setup.image_url ? (
           <Image src={setup.image_url} alt={setup.title} fill style={{ objectFit: 'cover' }} sizes="(max-width: 900px) 100vw, 900px" priority />
         ) : (
@@ -473,28 +412,64 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         )}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '32px 24px 20px', background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>{setup.title}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{setup.category} · {(setup.tags?.length || 0) + (setup.components?.length || 0)} componentes</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{setup.category} · {(setup.tags?.filter(t => typeof t === 'string' ? t !== 'Custom Setup' : t.name).length || 0) + (setup.components?.length || 0)} componentes</div>
+        </div>
+
+        {/* Like y reporte sobre la imagen */}
+        <div style={{ position: 'absolute', top: 14, right: 14, display: 'flex', gap: 8 }}>
+          {!isOwner && (
+            <div style={{ position: 'relative' }}>
+              {!showReport[setup.id] ? (
+                <button
+                  onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: true }))}
+                  style={{ background: 'rgba(0,0,0,0.6)', border: 'none', color: 'rgba(255,255,255,0.7)', width: 36, height: 36, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}
+                >
+                  ⚑
+                </button>
+              ) : (
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140 }}>
+                  <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>
+                    {reported[setup.id] ? '✓ Reportado' : '¿Reportar este setup?'}
+                  </span>
+                  {!reported[setup.id] && (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => handleReport(setup.id, setup.user_name)} style={{ flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Reportar</button>
+                      <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: false }))} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Cancelar</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={() => toggleLike(setup.id)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: liked[setup.id] ? 'rgba(255,77,109,0.2)' : 'rgba(0,0,0,0.6)', border: `1px solid ${liked[setup.id] ? 'rgba(255,77,109,0.5)' : 'transparent'}`, color: liked[setup.id] ? '#ff4d6d' : '#fff', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, padding: '7px 14px', borderRadius: 50, cursor: 'pointer', backdropFilter: 'blur(4px)', transition: 'all 0.18s' }}
+          >
+            <span style={{ fontSize: 14, transition: 'transform 0.2s', transform: liked[setup.id] ? 'scale(1.25)' : 'scale(1)' }}>
+              {liked[setup.id] ? '♥' : '♡'}
+            </span>
+            {likes[setup.id] || 0}
+          </button>
         </div>
       </div>
 
       {/* ── Periféricos ── */}
-      {setup.tags && setup.tags.length > 0 && (
+      {setup.tags && setup.tags.filter(t => typeof t === 'string' ? t !== 'Custom Setup' : t.name).length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>
-            🖱️ Periféricos y Accesorios
-          </h2>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🖱️ Periféricos y Accesorios</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {setup.tags.map((tag, i) => {
+            {setup.tags.filter(t => typeof t === 'string' ? t !== 'Custom Setup' : t.name).map((tag, i) => {
               const name = typeof tag === 'string' ? tag : tag.name
               const links = typeof tag === 'string' ? [] : (tag.links || [])
               const displayLinks = links.length > 0 ? links : [{ shop: 'Amazon', url: makeDefaultLink(name, 'Amazon') }]
               return (
                 <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: links.length > 1 ? 10 : 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🖱️</div>
                     <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{name}</div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {displayLinks.map((link, li) => (
                       <a key={li} href={link.url} target="_blank" rel="noopener noreferrer" style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none', letterSpacing: '0.3px' }}>
                         {link.shop} →
@@ -511,9 +486,7 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
       {/* ── Componentes internos ── */}
       {setup.components && setup.components.length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>
-            🔧 Componentes Internos del PC
-          </h2>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🔧 Componentes Internos del PC</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {setup.components.map((comp, i) => {
               const links = comp.links || []
@@ -538,11 +511,9 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         </div>
       )}
 
-      {/* Disclaimer */}
       <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.5 }}>
         Los links llevan a tiendas externas. Si compras a través de ellos podemos recibir una pequeña comisión sin coste adicional para ti.
       </p>
-
     </div>
   )
 }
