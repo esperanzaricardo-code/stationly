@@ -91,10 +91,16 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         setSessionToken(data.session?.access_token || '')
       }
     })
-    // Inicializar likes desde los setups
     const initialLikes: Record<string, number> = {}
     initialSetups.forEach(s => { initialLikes[s.id] = s.likes || 0 })
     setLikes(initialLikes)
+
+    const onNewSetup = (e: Event) => {
+      const setup = (e as CustomEvent).detail
+      setSetups(prev => [setup, ...prev])
+    }
+    document.addEventListener('stationly:new-setup', onNewSetup)
+    return () => document.removeEventListener('stationly:new-setup', onNewSetup)
   }, [username, initialSetups])
 
   async function toggleLike(setupId: string) {
