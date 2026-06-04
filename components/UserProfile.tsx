@@ -1,8 +1,9 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Setup, Component, ShopLink } from '@/lib/supabase'
+import { Setup, Component, ShopLink, Pin } from '@/lib/supabase'
 import { supabase } from '@/lib/supabase'
+import PinEditor from './PinEditor'
 
 const AVATAR_GRADIENTS = [
   ['#CFFA7C','#9CE89D'], ['#f43f5e','#fb923c'], ['#06b6d4','#6366f1'],
@@ -72,6 +73,7 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
   const fileRef = useRef<HTMLInputElement>(null)
   const [editTags, setEditTags] = useState<Component[]>([])
   const [editComponents, setEditComponents] = useState<Component[]>([])
+  const [editPins, setEditPins] = useState<Pin[]>([])
 
   const setup = setups[activeSetup]
 
@@ -146,6 +148,7 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         : { ...t, links: t.links || [] }
     ) : [])
     setEditComponents(setup.components ? setup.components.map(c => ({ ...c, links: c.links || [] })) : [])
+    setEditPins(setup.pins || [])
     setNewImageFile(null)
     setNewImagePreview(null)
     setEditing(true)
@@ -220,6 +223,7 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         title: editTitle,
         tags: editTags.filter(t => t.name.trim()),
         components: editComponents.filter(c => c.name.trim()),
+        pins: editPins,
         image_url,
       }
       const res = await fetch('/api/setups', {
@@ -409,43 +413,63 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         </div>
       )}
 
-      {/* ── Setup image ── */}
-      <div style={{ width: '100%', aspectRatio: '4/3', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: 28, border: '1px solid var(--border)', background: `linear-gradient(135deg, ${pc[0]}, ${pc[1]}, ${pc[2]})`, position: 'relative', boxShadow: 'var(--shadow-lg)' }}>
+     {/* ── Setup image con pins ── */}
+      <div style={{ marginBottom: 28, position: 'relative' }}>
         {setup.image_url ? (
-          <Image src={setup.image_url} alt={setup.title} fill style={{ objectFit: 'cover' }} sizes="(max-width: 900px) 100vw, 900px" priority />
+          <PinEditor
+            imageUrl={setup.image_url}
+            pins={editing ? editPins : (setup.pins || [])}
+            isOwner={isOwner}
+            editing={editing}
+            onChange={setEditPins}
+          />
         ) : (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>🖥️</div>
+          <div style={{ width: '100%', aspectRatio: '4/3', borderRadius: 'var(--radius)', background: `linear-gradient(135deg, ${pc[0]}, ${pc[1]}, ${pc[2]})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, border: '1px solid var(--border)' }}>
+            🖥️
+          </div>
         )}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '32px 24px 20px', background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>{setup.title}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{setup.category} · {(setup.tags?.filter(t => typeof t === 'string' ? t !== 'Custom Setup' : t.name).length || 0) + (setup.components?.length || 0)} componentes</div>
-        </div>
 
-        {/* Like y reporte sobre la imagen */}
-        <div style={{ position: 'absolute', top: 14, right: 14, display: 'flex', gap: 8 }}>
-          {!isOwner && (
-            <div style={{ position: 'relative' }}>
-              {!showReport[setup.id] ? (
-                <button
-                  onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: true }))}
-                  style={{ background: 'rgba(0,0,0,0.6)', border: 'none', color: 'rgba(255,255,255,0.7)', width: 36, height: 36, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}
-                >
-                  ⚑
-                </button>
-              ) : (
-                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140 }}>
-                  <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>
-                    {reported[setup.id] ? '✓ Reportado' : '¿Reportar este setup?'}
-                  </span>
-                  {!reported[setup.id] && (
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => handleReport(setup.id, setup.user_name)} style={{ flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Reportar</button>
-                      <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: false }))} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Cancelar</button>
+        {/* Título overlay */}
+        {!editing && setup.image_url && (
+          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px' }}>{setup.title}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{setup.category} · {(setup.pins?.length || 0)} componentes marcados</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {!isOwner && (
+                <div style={{ position: 'relative' }}>
+                  {!showReport[setup.id] ? (
+                    <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: true }))}
+                      style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', width: 36, height: 36, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      ⚑
+                    </button>
+                  ) : (
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140, position: 'absolute', right: 0, top: 40, zIndex: 10 }}>
+                      <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>
+                        {reported[setup.id] ? '✓ Reportado' : '¿Reportar este setup?'}
+                      </span>
+                      {!reported[setup.id] && (
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => handleReport(setup.id, setup.user_name)} style={{ flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Reportar</button>
+                          <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: false }))} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Cancelar</button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               )}
+              <button onClick={() => toggleLike(setup.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: liked[setup.id] ? 'rgba(255,77,109,0.1)' : 'var(--surface2)', border: `1px solid ${liked[setup.id] ? 'rgba(255,77,109,0.5)' : 'var(--border)'}`, color: liked[setup.id] ? '#ff4d6d' : 'var(--text-muted)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, padding: '7px 14px', borderRadius: 50, cursor: 'pointer', transition: 'all 0.18s' }}>
+                <span style={{ fontSize: 14, transition: 'transform 0.2s', transform: liked[setup.id] ? 'scale(1.25)' : 'scale(1)' }}>
+                  {liked[setup.id] ? '♥' : '♡'}
+                </span>
+                {likes[setup.id] || 0}
+              </button>
             </div>
+          </div>
+        )}
+      </div>
           )}
 
           <button
