@@ -22,8 +22,8 @@ export default function LandingHero() {
   return (
     <section style={{
       position: 'relative', zIndex: 1,
-      padding: '100px 32px 80px',
-      maxWidth: 1400, margin: '0 auto',
+      padding: 'clamp(60px, 8vw, 100px) 24px 60px',
+      maxWidth: 1100, margin: '0 auto',
       textAlign: 'center',
     }}>
       {/* Eyebrow */}
@@ -39,10 +39,10 @@ export default function LandingHero() {
       </div>
 
       {/* Title */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 24 }}>
         <h1 style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 'clamp(32px, 4.8vw, 62px)',
+          fontSize: 'clamp(28px, 4.8vw, 62px)',
           fontWeight: 800, lineHeight: 1.12,
           letterSpacing: '-0.5px', color: 'var(--text)',
           margin: '0 0 8px 0',
@@ -51,7 +51,7 @@ export default function LandingHero() {
         </h1>
         <div style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 'clamp(32px, 4.8vw, 62px)',
+          fontSize: 'clamp(28px, 4.8vw, 62px)',
           fontWeight: 800, lineHeight: 1.3,
           letterSpacing: '-0.5px',
           background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
@@ -66,15 +66,14 @@ export default function LandingHero() {
 
       {/* Subtitle */}
       <p style={{
-        color: 'var(--text-muted)', fontSize: 18, fontWeight: 300,
-        maxWidth: 540, margin: '0 auto 44px', lineHeight: 1.65,
+        color: 'var(--text-muted)', fontSize: 'clamp(15px, 2vw, 18px)', fontWeight: 300,
+        maxWidth: 520, margin: '0 auto 40px', lineHeight: 1.65,
       }}>
-        Sube tu escritorio, etiqueta tus componentes con IA y comparte tu link en la bio.
-        Tus viewers descubren exactamente con qué trabajas y juegas.
+        ¿Cuántas veces has respondido "¿qué ratón usas?" en el chat? Sube tu setup, añade tus componentes y comparte el link. Ya está.
       </p>
 
       {/* CTA */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 80, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 64, flexWrap: 'wrap' }}>
         <Link href="/login" className="btn-primary" style={{ fontSize: 15, padding: '14px 32px' }}>
           Empezar gratis →
         </Link>
@@ -84,7 +83,7 @@ export default function LandingHero() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 56, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(24px, 5vw, 56px)', flexWrap: 'wrap' }}>
         {[
           { num: '100%', label: 'Gratis para siempre' },
           { num: 'IA', label: 'Detección automática' },
@@ -92,7 +91,7 @@ export default function LandingHero() {
         ].map(({ num, label }) => (
           <div key={label} style={{ textAlign: 'center' }}>
             <div style={{
-              fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800,
+              fontFamily: 'var(--font-display)', fontSize: 'clamp(20px, 3vw, 28px)', fontWeight: 800,
               background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             }}>
