@@ -1,9 +1,32 @@
 'use client'
+import { useEffect, useState } from 'react'
 import { useTheme } from './ThemeProvider'
+import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function Nav({ setupCount, totalLikes }: { setupCount?: number; totalLikes?: number }) {
   const { theme, toggle } = useTheme()
+  const router = useRouter()
+  const [loggedIn, setLoggedIn] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setLoggedIn(!!data.session)
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session)
+    })
+    return () => listener.subscription.unsubscribe()
+  }, [])
+
+  function handleUpload() {
+    if (loggedIn) {
+      document.dispatchEvent(new CustomEvent('stationly:open-upload'))
+    } else {
+      router.push('/login')
+    }
+  }
 
   return (
     <nav style={{
@@ -24,7 +47,6 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
           }}>ly</span>
         </span>
       </Link>
-
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <button
           onClick={toggle}
@@ -39,13 +61,25 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
           {theme === 'dark' ? '☀️' : '🌙'}
         </button>
 
-        <Link href="/login" className="btn-secondary" style={{ fontSize: 13 }}>
-          Iniciar sesión
-        </Link>
+        {loggedIn ? (
+          <button
+            onClick={() => {
+              supabase.auth.signOut().then(() => router.push('/'))
+            }}
+            className="btn-secondary"
+            style={{ fontSize: 13 }}
+          >
+            Cerrar sesión
+          </button>
+        ) : (
+          <Link href="/login" className="btn-secondary" style={{ fontSize: 13 }}>
+            Iniciar sesión
+          </Link>
+        )}
 
         <button
           className="btn-primary"
-          onClick={() => document.dispatchEvent(new CustomEvent('stationly:open-upload'))}
+          onClick={handleUpload}
           style={{ fontSize: 13, padding: '9px 18px' }}
         >
           <span>📸</span> Subir Setup
