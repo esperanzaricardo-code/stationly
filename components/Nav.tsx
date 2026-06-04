@@ -9,13 +9,25 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
   const { theme, toggle } = useTheme()
   const router = useRouter()
   const [loggedIn, setLoggedIn] = useState(false)
+  const [username, setUsername] = useState('')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setLoggedIn(!!data.session)
+      const user = data.session?.user
+      if (user) {
+        setLoggedIn(true)
+        setUsername(user.user_metadata?.username || user.email?.split('@')[0] || '')
+      }
     })
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setLoggedIn(!!session)
+      const user = session?.user
+      if (user) {
+        setLoggedIn(true)
+        setUsername(user.user_metadata?.username || user.email?.split('@')[0] || '')
+      } else {
+        setLoggedIn(false)
+        setUsername('')
+      }
     })
     return () => listener.subscription.unsubscribe()
   }, [])
@@ -47,6 +59,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
           }}>ly</span>
         </span>
       </Link>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <button
           onClick={toggle}
@@ -62,15 +75,38 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
         </button>
 
         {loggedIn ? (
-          <button
-            onClick={() => {
-              supabase.auth.signOut().then(() => router.push('/'))
-            }}
-            className="btn-secondary"
-            style={{ fontSize: 13 }}
-          >
-            Cerrar sesión
-          </button>
+          <>
+            <Link
+              href={`/u/${username}`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: 'var(--surface2)', border: '1px solid var(--border)',
+                borderRadius: 50, padding: '6px 14px 6px 6px',
+                textDecoration: 'none', transition: 'all 0.2s',
+              }}
+            >
+              <div style={{
+                width: 26, height: 26, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11,
+                color: '#0a0a0b', flexShrink: 0,
+              }}>
+                {username.slice(0, 2).toUpperCase()}
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
+                {username}
+              </span>
+            </Link>
+
+            <button
+              onClick={() => supabase.auth.signOut().then(() => router.push('/'))}
+              className="btn-secondary"
+              style={{ fontSize: 13 }}
+            >
+              Salir
+            </button>
+          </>
         ) : (
           <Link href="/login" className="btn-secondary" style={{ fontSize: 13 }}>
             Iniciar sesión
