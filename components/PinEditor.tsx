@@ -5,6 +5,15 @@ import { Pin, ShopLink } from '@/lib/supabase'
 
 const SHOPS = ['Amazon', 'PcComponentes', 'MediaMarkt', 'Otro'] as const
 
+function generateLinks(productName: string): ShopLink[] {
+  const query = encodeURIComponent(productName)
+  return [
+    { shop: 'Amazon', url: `https://www.amazon.es/s?k=${query}` },
+    { shop: 'PcComponentes', url: `https://www.pccomponentes.com/buscar/?query=${query}` },
+    { shop: 'MediaMarkt', url: `https://www.mediamarkt.es/es/search.html?query=${query}` },
+  ]
+}
+
 type Props = {
   imageUrl: string
   pins: Pin[]
@@ -16,9 +25,12 @@ type Props = {
 export default function PinEditor({ imageUrl, pins, isOwner, editing, onChange }: Props) {
   const [activePin, setActivePin] = useState<number | null>(null)
   const [scanningPin, setScanningPin] = useState<number | null>(null)
+  const [searchingPin, setSearchingPin] = useState<number | null>(null)
   const [scanError, setScanError] = useState('')
+  const [suggestions, setSuggestions] = useState<Record<number, string>>({})
   const imageRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
 
   function handleImageClick(e: React.MouseEvent<HTMLDivElement>) {
     if (!editing || !onChange) return
@@ -64,6 +76,39 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, onChange }
     onChange(pins.map(p => p.id === id ? { ...p, links: p.links.filter((_, k) => k !== li) } : p))
   }
 
+  async function searchProduct(pinId: number, query: string) {
+    if (!query.trim()) return
+    setSearchingPin(pinId)
+    setScanError('')
+    try {
+      const res = await fetch('/api/ai-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, singleComponent: true, textOnly: true }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const productName = data.components?.[0] || query
+      setSuggestions(prev => ({ ...prev, [pinId]: productName }))
+    } catch (err: unknown) {
+      setScanError(err instanceof Error ? err.message : 'Error al buscar')
+    } finally {
+      setSearchingPin(null)
+    }
+  }
+
+  function acceptSuggestion(pinId: number) {
+    const suggestion = suggestions[pinId]
+    if (!suggestion || !onChange) return
+    const links = generateLinks(suggestion)
+    onChange(pins.map(p => p.id === pinId ? { ...p, name: suggestion, links } : p))
+    setSuggestions(prev => { const n = { ...prev }; delete n[pinId]; return n })
+  }
+
+  function rejectSuggestion(pinId: number) {
+    setSuggestions(prev => { const n = { ...prev }; delete n[pinId]; return n })
+  }
+
   async function scanComponent(pinId: number, file: File) {
     setScanningPin(pinId)
     setScanError('')
@@ -80,8 +125,12 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, onChange }
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
-        if (data.components?.[0]) {
-          updatePinName(pinId, data.components[0])
+        const productName = data.components?.[0] || ''
+        if (productName) {
+          const links = generateLinks(productName)
+          if (onChange) {
+            onChange(pins.map(p => p.id === pinId ? { ...p, name: productName, links } : p))
+          }
         }
         setScanningPin(null)
       }
@@ -114,7 +163,6 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, onChange }
       >
         <Image src={imageUrl} alt="Setup" fill style={{ objectFit: 'cover' }} sizes="(max-width: 900px) 100vw, 900px" priority />
 
-        {/* Overlay hint cuando está en modo edición */}
         {editing && pins.length === 0 && (
           <div style={{
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -141,7 +189,6 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, onChange }
               zIndex: 10, cursor: 'pointer',
             }}
           >
-            {/* Pin marker */}
             <div style={{
               width: 28, height: 28, borderRadius: '50%',
               background: activePin === pin.id ? 'var(--accent)' : 'rgba(0,0,0,0.8)',
@@ -156,7 +203,7 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, onChange }
               {i + 1}
             </div>
 
-            {/* Tooltip — vista pública */}
+            {/* Tooltip vista pública */}
             {!editing && activePin === pin.id && pin.name && (
               <div
                 onClick={e => e.stopPropagation()}
@@ -190,7 +237,7 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, onChange }
         ))}
       </div>
 
-      {/* Panel de edición de pins */}
+      {/* Panel de edición */}
       {editing && pins.length > 0 && (
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 4 }}>
@@ -198,12 +245,12 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, onChange }
           </div>
 
           {pins.map((pin, i) => (
-            <div key={pin.id} style={{
-              background: activePin === pin.id ? 'var(--surface2)' : 'var(--surface)',
-              border: `1px solid ${activePin === pin.id ? 'var(--accent)' : 'var(--border)'}`,
-              borderRadius: 'var(--radius-sm)', padding: 14,
-              cursor: 'pointer',
-            }}
+            <div key={pin.id}
+              style={{
+                background: activePin === pin.id ? 'var(--surface2)' : 'var(--surface)',
+                border: `1px solid ${activePin === pin.id ? 'var(--accent)' : 'var(--border)'}`,
+                borderRadius: 'var(--radius-sm)', padding: 14, cursor: 'pointer',
+              }}
               onClick={() => setActivePin(activePin === pin.id ? null : pin.id)}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: activePin === pin.id ? 12 : 0 }}>
@@ -226,57 +273,118 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, onChange }
 
               {activePin === pin.id && (
                 <div onClick={e => e.stopPropagation()}>
-                  {/* Nombre del componente */}
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                    <input
-                      value={pin.name}
-                      onChange={e => updatePinName(pin.id, e.target.value)}
-                      placeholder="Ej: Keychron Q1, LG UltraWide..."
-                      style={{ ...inputStyle, flex: 1 }}
-                    />
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={e => e.target.files?.[0] && scanComponent(pin.id, e.target.files[0])}
-                    />
-                    <button
-                      onClick={() => fileRef.current?.click()}
-                      disabled={scanningPin === pin.id}
-                      style={{
+
+                  {/* Buscador */}
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                      <input
+                        value={pin.name}
+                        onChange={e => updatePinName(pin.id, e.target.value)}
+                        placeholder="Ej: RTX 4090, Keychron Q1..."
+                        style={{ ...inputStyle, flex: 1 }}
+                        onKeyDown={e => e.key === 'Enter' && searchProduct(pin.id, pin.name)}
+                      />
+                      <button
+                        onClick={() => searchProduct(pin.id, pin.name)}
+                        disabled={searchingPin === pin.id || !pin.name.trim()}
+                        style={{
+                          background: 'var(--tag-bg)', border: '1px solid var(--tag-border)',
+                          color: 'var(--tag-text)', borderRadius: 'var(--radius-sm)',
+                          padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                          flexShrink: 0, opacity: searchingPin === pin.id || !pin.name.trim() ? 0.5 : 1,
+                          fontFamily: 'var(--font-display)',
+                        }}
+                      >
+                        {searchingPin === pin.id ? '⏳' : '🔍 Buscar'}
+                      </button>
+                    </div>
+
+                    {/* Sugerencia de la IA */}
+                    {suggestions[pin.id] && (
+                      <div style={{
                         background: 'var(--tag-bg)', border: '1px solid var(--tag-border)',
-                        color: 'var(--tag-text)', borderRadius: 'var(--radius-sm)',
-                        padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700,
-                        flexShrink: 0, opacity: scanningPin === pin.id ? 0.5 : 1,
-                        fontFamily: 'var(--font-display)',
-                      }}
-                    >
-                      {scanningPin === pin.id ? '⏳' : '📷 Foto'}
+                        borderRadius: 'var(--radius-sm)', padding: '10px 12px',
+                        marginBottom: 8,
+                      }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>✦ Sugerencia IA:</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--tag-text)', marginBottom: 8 }}>
+                          {suggestions[pin.id]}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => acceptSuggestion(pin.id)} style={{
+                            flex: 1, background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+                            border: 'none', color: '#0a0a0b', fontSize: 12, fontWeight: 700,
+                            padding: '6px', borderRadius: 6, cursor: 'pointer',
+                            fontFamily: 'var(--font-display)',
+                          }}>
+                            ✓ Aceptar + links automáticos
+                          </button>
+                          <button onClick={() => rejectSuggestion(pin.id)} style={{
+                            background: 'var(--surface2)', border: '1px solid var(--border)',
+                            color: 'var(--text-muted)', fontSize: 12, padding: '6px 10px',
+                            borderRadius: 6, cursor: 'pointer',
+                          }}>
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Foto con IA */}
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                    <input ref={cameraRef} type="file" accept="image/*" capture="environment"
+                      style={{ display: 'none' }}
+                      onChange={e => e.target.files?.[0] && scanComponent(pin.id, e.target.files[0])} />
+                    <input ref={fileRef} type="file" accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={e => e.target.files?.[0] && scanComponent(pin.id, e.target.files[0])} />
+                    <button onClick={() => cameraRef.current?.click()} disabled={scanningPin === pin.id}
+                      style={{
+                        flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)',
+                        color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)',
+                        padding: '7px', cursor: 'pointer', fontSize: 12,
+                        opacity: scanningPin === pin.id ? 0.5 : 1,
+                      }}>
+                      {scanningPin === pin.id ? '⏳ Identificando...' : '📷 Foto con IA'}
+                    </button>
+                    <button onClick={() => fileRef.current?.click()} disabled={scanningPin === pin.id}
+                      style={{
+                        flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)',
+                        color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)',
+                        padding: '7px', cursor: 'pointer', fontSize: 12,
+                        opacity: scanningPin === pin.id ? 0.5 : 1,
+                      }}>
+                      {scanningPin === pin.id ? '⏳' : '🖼️ Subir imagen'}
                     </button>
                   </div>
 
                   {scanError && <div style={{ color: '#ff4d6d', fontSize: 11, marginBottom: 8 }}>⚠️ {scanError}</div>}
 
-                  {/* Links de compra */}
-                  {pin.links.map((link, li) => (
-                    <div key={li} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                      <select value={link.shop} onChange={e => updatePinLink(pin.id, li, 'shop', e.target.value)}
-                        style={{ ...inputStyle, width: 'auto', flexShrink: 0 }}>
-                        {SHOPS.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      <input value={link.url} onChange={e => updatePinLink(pin.id, li, 'url', e.target.value)}
-                        placeholder="https://..." style={{ ...inputStyle, flex: 1 }} />
-                      <button onClick={() => removePinLink(pin.id, li)}
-                        style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', cursor: 'pointer', flexShrink: 0 }}>
-                        ✕
-                      </button>
+                  {/* Links manuales */}
+                  {pin.links.length > 0 && (
+                    <div style={{ marginBottom: 6 }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Links de compra</div>
+                      {pin.links.map((link, li) => (
+                        <div key={li} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                          <select value={link.shop} onChange={e => updatePinLink(pin.id, li, 'shop', e.target.value)}
+                            style={{ ...inputStyle, width: 'auto', flexShrink: 0 }}>
+                            {SHOPS.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                          <input value={link.url} onChange={e => updatePinLink(pin.id, li, 'url', e.target.value)}
+                            placeholder="https://..." style={{ ...inputStyle, flex: 1 }} />
+                          <button onClick={() => removePinLink(pin.id, li)}
+                            style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', cursor: 'pointer', flexShrink: 0 }}>
+                            ✕
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
 
                   <button onClick={() => addPinLink(pin.id)}
                     style={{ background: 'transparent', border: '1px dashed var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '6px 12px', cursor: 'pointer', fontSize: 12, width: '100%', marginTop: 4 }}>
-                    + Añadir link de compra
+                    + Añadir link manual
                   </button>
                 </div>
               )}
