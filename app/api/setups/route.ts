@@ -53,7 +53,6 @@ export async function POST(req: NextRequest) {
     const tagsRaw     = formData.get('tags') as string
     const file        = formData.get('image') as File | null
 
-    // Verificar sesión y obtener username real
     if (!sessionToken) {
       return NextResponse.json({ error: 'Debes iniciar sesión para publicar' }, { status: 401 })
     }
@@ -69,7 +68,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'El título es obligatorio' }, { status: 400 })
     }
 
-    const tags: string[] = tagsRaw ? JSON.parse(tagsRaw) : []
+    // Convertir tags de string[] a Component[]
+    const rawTags: string[] = tagsRaw ? JSON.parse(tagsRaw) : []
+    const tags = rawTags.map((name: string) => ({
+      name,
+      type: 'peripheral',
+      links: [],
+    }))
+
     let image_url: string | null = null
 
     if (file && file.size > 0) {
@@ -98,11 +104,57 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabase
       .from('setups')
-      .insert([{ user_name: userName, title, category, tags, image_url, likes: 0 }])
+      .insert([{
+        user_name: userName,
+        title,
+        category,
+        tags,
+        components: [],
+        image_url,
+        likes: 0,
+      }])
       .select().single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json(data, { status: 201 })
+
+  } catch (err) {
+    console.error(err)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const { setupId, sessionToken, updates } = await req.json()
+
+    if (!sessionToken) {
+      return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 })
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(sessionToken)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 })
+    }
+
+    const userName = user.user_metadata?.username || user.email?.split('@')[0] || 'usuario'
+
+    // Verificar que el setup pertenece al usuario
+    const { data: existing } = await supabase
+      .from('setups').select('user_name').eq('id', setupId).single()
+
+    if (!existing || existing.user_name.toLowerCase() !== userName.toLowerCase()) {
+      return NextResponse.json({ error: 'No tienes permiso para editar este setup' }, { status: 403 })
+    }
+
+    const { data, error } = await supabase
+      .from('setups')
+      .update(updates)
+      .eq('id', setupId)
+      .select().single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data)
 
   } catch (err) {
     console.error(err)
