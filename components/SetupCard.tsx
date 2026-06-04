@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { Setup } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 
 const AVATAR_GRADIENTS = [
   ['#CFFA7C','#9CE89D'], ['#f43f5e','#fb923c'], ['#06b6d4','#6366f1'],
@@ -49,12 +50,17 @@ function timeAgo(dateStr: string) {
 }
 
 export default function SetupCard({ setup }: { setup: Setup }) {
+  const router = useRouter()
   const [likes, setLikes] = useState(setup.likes || 0)
   const [liked, setLiked] = useState(false)
   const [loading, setLoading] = useState(false)
   const [hovered, setHovered] = useState(false)
   const [reported, setReported] = useState(false)
   const [showReport, setShowReport] = useState(false)
+
+  function handleCardClick() {
+    router.push(`/u/${encodeURIComponent(setup.user_name)}`)
+  }
 
   async function toggleLike(e: React.MouseEvent) {
     e.stopPropagation()
@@ -95,6 +101,7 @@ export default function SetupCard({ setup }: { setup: Setup }) {
 
   return (
     <div
+      onClick={handleCardClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setShowReport(false) }}
       style={{
