@@ -43,6 +43,51 @@ type Props = { setups: Setup[]; username: string }
 
 export default function UserProfile({ setups: initialSetups, username }: Props) {
   const [setups, setSetups] = useState(initialSetups)
+
+  if (setups.length === 0) {
+    return (
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 36 }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
+            background: getAvatarGradient(username),
+            fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#0a0a0b', border: '3px solid var(--accent)',
+            boxShadow: '0 0 20px var(--accent-glow)',
+          }}>
+            {username.slice(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4 }}>
+              {username}
+            </h1>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>0 Setups · 0 Componentes · 0 Likes</div>
+          </div>
+        </div>
+        <div style={{
+          textAlign: 'center', padding: '60px 24px',
+          background: 'var(--surface)', border: '1px dashed var(--border)',
+          borderRadius: 'var(--radius)',
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🖥️</div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>
+            Aún no hay ningún setup
+          </h2>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>
+            Sube tu primer setup y muéstrale al mundo cómo juegas.
+          </p>
+          <button
+            className="btn-primary"
+            onClick={() => document.dispatchEvent(new CustomEvent('stationly:open-upload'))}
+            style={{ fontSize: 14, padding: '11px 24px' }}
+          >
+            📸 Subir mi primer setup
+          </button>
+        </div>
+      </div>
+    )
+  }
   const [activeSetup, setActiveSetup] = useState(0)
   const [isOwner, setIsOwner] = useState(false)
   const [sessionToken, setSessionToken] = useState('')
