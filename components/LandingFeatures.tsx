@@ -6,19 +6,19 @@ export default function LandingFeatures() {
       num: '01',
       icon: '📸',
       title: 'Todo en un sitio',
-      desc: 'Sube una foto de tu setup, añade tus componentes y tendrás una página pública lista para compartir. Nunca más respondas las mismas preguntas del chat.',
+      desc: 'Sube una foto de tu setup y tendrás una página pública lista para compartir en tu bio de Twitch, YouTube o Instagram.',
     },
     {
       num: '02',
       icon: '✦',
-      title: 'Detección automática',
-      desc: 'Nuestra IA identifica cada periférico y componente de tu foto automáticamente y los enlaza a tiendas. Tú solo confirmas.',
+      title: 'Componentes detectados con IA',
+      desc: 'Haz una foto a cada componente y nuestra IA lo identifica automáticamente. También puedes añadirlos manualmente.',
     },
     {
       num: '03',
       icon: '🔗',
       title: 'Gana sin esfuerzo',
-      desc: 'Cada componente lleva un link de compra. Cuando alguien de tu audiencia compra algo de tu setup, tú te llevas una comisión sin hacer nada extra.',
+      desc: 'Cada componente lleva un link de compra directo. Tus viewers encuentran exactamente lo que usas con un solo click.*',
     },
   ]
 
@@ -28,7 +28,6 @@ export default function LandingFeatures() {
       padding: '80px 32px',
       maxWidth: 1100, margin: '0 auto',
     }}>
-      {/* Section header */}
       <div style={{ textAlign: 'center', marginBottom: 56 }}>
         <h2 style={{
           fontFamily: 'var(--font-display)', fontSize: 'clamp(24px, 3vw, 40px)',
@@ -45,7 +44,6 @@ export default function LandingFeatures() {
         </p>
       </div>
 
-      {/* Grid de 3 */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(3, 1fr)',
@@ -80,7 +78,6 @@ export default function LandingFeatures() {
               ;(e.currentTarget as HTMLDivElement).style.transform = 'none'
             }}
           >
-            {/* Número decorativo */}
             <div style={{
               position: 'absolute', top: 16, right: 20,
               fontFamily: 'var(--font-display)', fontSize: 48, fontWeight: 800,
@@ -89,7 +86,6 @@ export default function LandingFeatures() {
               {f.num}
             </div>
 
-            {/* Icono */}
             <div style={{
               width: 56, height: 56, borderRadius: 16, margin: '0 auto 20px',
               background: 'var(--tag-bg)', border: '1px solid var(--tag-border)',
@@ -111,6 +107,11 @@ export default function LandingFeatures() {
           </div>
         ))}
       </div>
+
+      {/* Disclaimer afiliados */}
+      <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-dim)', marginTop: 24, lineHeight: 1.5 }}>
+        * Consulta nuestros <a href="/legal/terminos" style={{ color: 'var(--tag-text)', textDecoration: 'none' }}>términos y condiciones</a> para más información sobre el programa de afiliados.
+      </p>
     </section>
   )
 }
