@@ -69,9 +69,7 @@ export default function LandingHero() {
         color: 'var(--text-muted)', fontSize: 'clamp(15px, 2vw, 18px)', fontWeight: 300,
         maxWidth: 520, margin: '0 auto 40px', lineHeight: 1.65,
       }}>
-        ¿Cuántas veces has respondido "¿qué ratón usas?" en el chat? Sube tu setup, añade tus componentes y comparte el link. Ya está.
-      </p>
-
+Sube tu setup, añade tus componentes con IA y comparte el link en tu bio. Tus viewers y seguidores descubren exactamente con qué trabajas y juegas.
       {/* CTA */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 64, flexWrap: 'wrap' }}>
         <Link href="/login" className="btn-primary" style={{ fontSize: 15, padding: '14px 32px' }}>
@@ -86,8 +84,8 @@ export default function LandingHero() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(24px, 5vw, 56px)', flexWrap: 'wrap' }}>
         {[
           { num: '100%', label: 'Gratis para siempre' },
-          { num: 'IA', label: 'Detección automática' },
-          { num: '🔗', label: 'Link para tu bio' },
+{ num: '✦', label: 'IA integrada' },
+      { num: '🔗', label: 'Link para tu bio' },
         ].map(({ num, label }) => (
           <div key={label} style={{ textAlign: 'center' }}>
             <div style={{
