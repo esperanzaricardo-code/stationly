@@ -16,6 +16,14 @@ export type Component = {
   links: ShopLink[]
 }
 
+export type Pin = {
+  id: number
+  x: number
+  y: number
+  name: string
+  links: ShopLink[]
+}
+
 export type Setup = {
   id: string
   user_name: string
@@ -23,6 +31,7 @@ export type Setup = {
   category: string
   tags: Component[]
   components: Component[]
+  pins: Pin[]
   image_url: string | null
   likes: number
   created_at: string
