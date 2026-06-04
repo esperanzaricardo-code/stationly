@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import Image from 'next/image'
 import { Setup, Component, ShopLink, Pin } from '@/lib/supabase'
 import { supabase } from '@/lib/supabase'
 import PinEditor from './PinEditor'
@@ -57,16 +56,13 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // Likes
   const [likes, setLikes] = useState<Record<string, number>>({})
   const [liked, setLiked] = useState<Record<string, boolean>>({})
   const [likingLoading, setLikingLoading] = useState<Record<string, boolean>>({})
 
-  // Reporte
   const [reported, setReported] = useState<Record<string, boolean>>({})
   const [showReport, setShowReport] = useState<Record<string, boolean>>({})
 
-  // Edición
   const [editTitle, setEditTitle] = useState('')
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null)
@@ -295,7 +291,6 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
     )
   }
 
-  // Estado vacío
   if (setups.length === 0) {
     return (
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
@@ -413,7 +408,7 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         </div>
       )}
 
-     {/* ── Setup image con pins ── */}
+      {/* ── Setup image con pins ── */}
       <div style={{ marginBottom: 28, position: 'relative' }}>
         {setup.image_url ? (
           <PinEditor
@@ -429,12 +424,11 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
           </div>
         )}
 
-        {/* Título overlay */}
         {!editing && setup.image_url && (
           <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
             <div>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px' }}>{setup.title}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{setup.category} · {(setup.pins?.length || 0)} componentes marcados</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{setup.category} · {setup.pins?.length || 0} componentes marcados</div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               {!isOwner && (
@@ -469,19 +463,6 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
             </div>
           </div>
         )}
-      </div>
-          )}
-
-          <button
-            onClick={() => toggleLike(setup.id)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: liked[setup.id] ? 'rgba(255,77,109,0.2)' : 'rgba(0,0,0,0.6)', border: `1px solid ${liked[setup.id] ? 'rgba(255,77,109,0.5)' : 'transparent'}`, color: liked[setup.id] ? '#ff4d6d' : '#fff', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, padding: '7px 14px', borderRadius: 50, cursor: 'pointer', backdropFilter: 'blur(4px)', transition: 'all 0.18s' }}
-          >
-            <span style={{ fontSize: 14, transition: 'transform 0.2s', transform: liked[setup.id] ? 'scale(1.25)' : 'scale(1)' }}>
-              {liked[setup.id] ? '♥' : '♡'}
-            </span>
-            {likes[setup.id] || 0}
-          </button>
-        </div>
       </div>
 
       {/* ── Periféricos ── */}
