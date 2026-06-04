@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import ImageCropper from './ImageCropper'
+import { supabase } from '@/lib/supabase'
 
 type AiTag = { label: string; accepted: boolean }
 
@@ -12,6 +13,7 @@ export default function UploadModal() {
   const [showCropper, setShowCropper] = useState(false)
   const [dragover, setDragover] = useState(false)
   const [userName, setUserName] = useState('')
+  const [sessionToken, setSessionToken] = useState('')
   const [title, setTitle] = useState('')
   const [tagsInput, setTagsInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -25,6 +27,16 @@ export default function UploadModal() {
     const open = () => setOpen(true)
     document.addEventListener('stationly:open-upload', open)
     return () => document.removeEventListener('stationly:open-upload', open)
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user
+      if (user) {
+        setUserName(user.user_metadata?.username || user.email?.split('@')[0] || '')
+        setSessionToken(data.session?.access_token || '')
+      }
+    })
   }, [])
 
   function handleFile(file: File) {
@@ -62,7 +74,7 @@ export default function UploadModal() {
 
   function closeModal() {
     setOpen(false); clearImage()
-    setUserName(''); setTitle(''); setTagsInput(''); setSubmitting(false)
+    setTitle(''); setTagsInput(''); setSubmitting(false)
   }
 
   async function runAiScan() {
@@ -107,8 +119,8 @@ export default function UploadModal() {
   }
 
   async function submitSetup() {
-    if (!userName.trim()) return
-    if (!title.trim()) return
+    if (!userName.trim()) { alert('No se pudo obtener tu nombre de usuario. ¿Estás logueado?'); return }
+    if (!title.trim()) { alert('Ponle un nombre a tu setup'); return }
     setSubmitting(true)
     try {
       const tags = tagsInput.trim()
@@ -117,11 +129,11 @@ export default function UploadModal() {
       const category = autoCategory(tags)
       const fd = new FormData()
       fd.append('user_name', userName.trim())
+      fd.append('session_token', sessionToken)
       fd.append('title', title.trim())
       fd.append('category', category)
       fd.append('tags', JSON.stringify(tags))
 
-      // Use cropped image if available, otherwise original file
       if (croppedPreview) {
         const res = await fetch(croppedPreview)
         const blob = await res.blob()
@@ -163,6 +175,19 @@ export default function UploadModal() {
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6, color: 'var(--text)' }}>Sube tu Setup</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 24 }}>Muéstrale al mundo cómo trabajas y juegas.</p>
 
+        {/* Nombre de usuario (solo lectura) */}
+        {!showCropper && (
+          <div style={{ marginBottom: 20, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0a0a0b', flexShrink: 0 }}>
+              {userName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase' }}>Publicando como</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{userName}</div>
+            </div>
+          </div>
+        )}
+
         {/* Drop zone */}
         {!rawPreview && !croppedPreview && (
           <div
@@ -180,11 +205,7 @@ export default function UploadModal() {
 
         {/* Cropper */}
         {showCropper && rawPreview && (
-          <ImageCropper
-            src={rawPreview}
-            onCrop={handleCropDone}
-            onCancel={handleCropCancel}
-          />
+          <ImageCropper src={rawPreview} onCrop={handleCropDone} onCancel={handleCropCancel} />
         )}
 
         {/* Cropped preview */}
@@ -200,7 +221,7 @@ export default function UploadModal() {
           </div>
         )}
 
-        {/* AI Panel — only show when image is cropped and cropper is hidden */}
+        {/* AI Panel */}
         {!showCropper && croppedPreview && (
           <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16, marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -242,11 +263,10 @@ export default function UploadModal() {
           </div>
         )}
 
-        {/* Form fields — only show when not in cropper */}
+        {/* Form fields */}
         {!showCropper && (
           <>
             {[
-              { label: 'Tu nombre / alias', value: userName, set: setUserName, placeholder: 'Ej: ShadowSetup, NightOwl...' },
               { label: 'Nombre del Setup', value: title, set: setTitle, placeholder: 'Ej: The Cyberpunk Lair...' },
               { label: 'Componentes (separados por coma)', value: tagsInput, set: setTagsInput, placeholder: 'RTX 4090, Keychron K2, LG OLED...' },
             ].map(f => (
