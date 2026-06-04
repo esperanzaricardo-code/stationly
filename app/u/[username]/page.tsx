@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/components/ThemeProvider'
 import AnimatedBackground from '@/components/AnimatedBackground'
 import Nav from '@/components/Nav'
 import UserProfile from '@/components/UserProfile'
+import UploadModal from '@/components/UploadModal'
 
 export const revalidate = 0
 
@@ -26,6 +27,7 @@ export default async function UserPage({ params }: { params: { username: string 
       <AnimatedBackground />
       <Nav />
       <UserProfile setups={setups} username={username} />
+      <UploadModal />
     </ThemeProvider>
   )
 }
