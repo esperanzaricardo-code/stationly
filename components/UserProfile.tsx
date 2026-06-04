@@ -369,11 +369,13 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         <div style={{ background: 'var(--surface)', border: '1px solid var(--accent)', borderRadius: 'var(--radius)', padding: 28, marginBottom: 28 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>✏️ Editando: {setup.title}</h2>
 
+          {/* Título */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Título del Setup</label>
             <input value={editTitle} onChange={e => setEditTitle(e.target.value)} style={inputStyle} />
           </div>
 
+          {/* Foto */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Foto del Setup</label>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleImageFile(e.target.files[0])} />
@@ -389,16 +391,33 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
             )}
           </div>
 
+          {/* Pins dentro del panel de edición */}
+          {(newImagePreview || setup.image_url) && (
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>📍 Componentes en la imagen</label>
+              <PinEditor
+                imageUrl={newImagePreview || setup.image_url || ''}
+                pins={editPins}
+                isOwner={isOwner}
+                editing={true}
+                onChange={setEditPins}
+              />
+            </div>
+          )}
+
+          {/* Periféricos */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>🖱️ Periféricos y Accesorios</label>
             <ComponentEditor items={editTags} onUpdateName={updateTagName} onAddLink={addTagLink} onUpdateLink={updateTagLink} onRemoveLink={removeTagLink} onRemove={removeTag} onAdd={addTag} addLabel="Añadir periférico" placeholder="Ej: Keychron K2, LG OLED..." />
           </div>
 
+          {/* Componentes internos */}
           <div style={{ marginBottom: 24 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>🔧 Componentes Internos del PC</label>
             <ComponentEditor items={editComponents} onUpdateName={updateComponentName} onAddLink={addComponentLink} onUpdateLink={updateComponentLink} onRemoveLink={removeComponentLink} onRemove={removeComponent} onAdd={addComponent} addLabel="Añadir componente interno" placeholder="Ej: RTX 4090, Ryzen 9 7950X..." />
           </div>
 
+          {/* Guardar / Cancelar */}
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={saveChanges} disabled={saving} className="btn-primary" style={{ flex: 1, fontSize: 14, padding: 13, opacity: saving ? 0.6 : 1 }}>
               {saving ? '⏳ Guardando...' : '✓ Guardar cambios'}
@@ -408,65 +427,67 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         </div>
       )}
 
-      {/* ── Setup image con pins ── */}
-      <div style={{ marginBottom: 28, position: 'relative' }}>
-        {setup.image_url ? (
-          <PinEditor
-            imageUrl={setup.image_url}
-            pins={editing ? editPins : (setup.pins || [])}
-            isOwner={isOwner}
-            editing={editing}
-            onChange={setEditPins}
-          />
-        ) : (
-          <div style={{ width: '100%', aspectRatio: '4/3', borderRadius: 'var(--radius)', background: `linear-gradient(135deg, ${pc[0]}, ${pc[1]}, ${pc[2]})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, border: '1px solid var(--border)' }}>
-            🖥️
-          </div>
-        )}
+      {/* ── Setup image con pins (vista) ── */}
+      {!editing && (
+        <div style={{ marginBottom: 28, position: 'relative' }}>
+          {setup.image_url ? (
+            <PinEditor
+              imageUrl={setup.image_url}
+              pins={setup.pins || []}
+              isOwner={isOwner}
+              editing={false}
+              onChange={setEditPins}
+            />
+          ) : (
+            <div style={{ width: '100%', aspectRatio: '4/3', borderRadius: 'var(--radius)', background: `linear-gradient(135deg, ${pc[0]}, ${pc[1]}, ${pc[2]})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, border: '1px solid var(--border)' }}>
+              🖥️
+            </div>
+          )}
 
-        {!editing && setup.image_url && (
-          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-            <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px' }}>{setup.title}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{setup.category} · {setup.pins?.length || 0} componentes marcados</div>
+          {setup.image_url && (
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px' }}>{setup.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{setup.category} · {setup.pins?.length || 0} componentes marcados</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {!isOwner && (
+                  <div style={{ position: 'relative' }}>
+                    {!showReport[setup.id] ? (
+                      <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: true }))}
+                        style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', width: 36, height: 36, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        ⚑
+                      </button>
+                    ) : (
+                      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140, position: 'absolute', right: 0, top: 40, zIndex: 10 }}>
+                        <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>
+                          {reported[setup.id] ? '✓ Reportado' : '¿Reportar este setup?'}
+                        </span>
+                        {!reported[setup.id] && (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button onClick={() => handleReport(setup.id, setup.user_name)} style={{ flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Reportar</button>
+                            <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: false }))} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Cancelar</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <button onClick={() => toggleLike(setup.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, background: liked[setup.id] ? 'rgba(255,77,109,0.1)' : 'var(--surface2)', border: `1px solid ${liked[setup.id] ? 'rgba(255,77,109,0.5)' : 'var(--border)'}`, color: liked[setup.id] ? '#ff4d6d' : 'var(--text-muted)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, padding: '7px 14px', borderRadius: 50, cursor: 'pointer', transition: 'all 0.18s' }}>
+                  <span style={{ fontSize: 14, transition: 'transform 0.2s', transform: liked[setup.id] ? 'scale(1.25)' : 'scale(1)' }}>
+                    {liked[setup.id] ? '♥' : '♡'}
+                  </span>
+                  {likes[setup.id] || 0}
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {!isOwner && (
-                <div style={{ position: 'relative' }}>
-                  {!showReport[setup.id] ? (
-                    <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: true }))}
-                      style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', width: 36, height: 36, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      ⚑
-                    </button>
-                  ) : (
-                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140, position: 'absolute', right: 0, top: 40, zIndex: 10 }}>
-                      <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>
-                        {reported[setup.id] ? '✓ Reportado' : '¿Reportar este setup?'}
-                      </span>
-                      {!reported[setup.id] && (
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={() => handleReport(setup.id, setup.user_name)} style={{ flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Reportar</button>
-                          <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: false }))} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Cancelar</button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-              <button onClick={() => toggleLike(setup.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, background: liked[setup.id] ? 'rgba(255,77,109,0.1)' : 'var(--surface2)', border: `1px solid ${liked[setup.id] ? 'rgba(255,77,109,0.5)' : 'var(--border)'}`, color: liked[setup.id] ? '#ff4d6d' : 'var(--text-muted)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, padding: '7px 14px', borderRadius: 50, cursor: 'pointer', transition: 'all 0.18s' }}>
-                <span style={{ fontSize: 14, transition: 'transform 0.2s', transform: liked[setup.id] ? 'scale(1.25)' : 'scale(1)' }}>
-                  {liked[setup.id] ? '♥' : '♡'}
-                </span>
-                {likes[setup.id] || 0}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* ── Periféricos ── */}
-      {setup.tags && setup.tags.filter(t => typeof t === 'string' ? t !== 'Custom Setup' : t.name).length > 0 && (
+      {!editing && setup.tags && setup.tags.filter(t => typeof t === 'string' ? t !== 'Custom Setup' : t.name).length > 0 && (
         <div style={{ marginBottom: 32 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🖱️ Periféricos y Accesorios</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -495,7 +516,7 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
       )}
 
       {/* ── Componentes internos ── */}
-      {setup.components && setup.components.length > 0 && (
+      {!editing && setup.components && setup.components.length > 0 && (
         <div style={{ marginBottom: 32 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🔧 Componentes Internos del PC</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
