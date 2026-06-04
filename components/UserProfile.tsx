@@ -35,12 +35,9 @@ function totalLikes(setups: Setup[]) {
 
 function totalComponents(setups: Setup[]) {
   return setups.reduce((a, s) => {
-    const tags = (s.tags || []).filter(t => {
-      const name = typeof t === 'string' ? t : t.name
-      return name && name !== 'Custom Setup'
-    })
+    const pins = (s.pins || []).filter(p => p.name && p.name.trim())
     const components = (s.components || []).filter(c => c.name && c.name.trim())
-    return a + tags.length + components.length
+    return a + pins.length + components.length
   }, 0)
 }
 
@@ -67,7 +64,6 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const [editTags, setEditTags] = useState<Component[]>([])
   const [editComponents, setEditComponents] = useState<Component[]>([])
   const [editPins, setEditPins] = useState<Pin[]>([])
 
@@ -138,11 +134,6 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
 
   function startEditing() {
     setEditTitle(setup.title)
-    setEditTags(setup.tags ? setup.tags.map(t =>
-      typeof t === 'string'
-        ? { name: t, type: 'peripheral', links: [] }
-        : { ...t, links: t.links || [] }
-    ) : [])
     setEditComponents(setup.components ? setup.components.map(c => ({ ...c, links: c.links || [] })) : [])
     setEditPins(setup.pins || [])
     setNewImageFile(null)
@@ -165,26 +156,6 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
     reader.readAsDataURL(file)
   }
 
-  function updateTagName(i: number, name: string) {
-    setEditTags(prev => prev.map((t, j) => j === i ? { ...t, name } : t))
-  }
-  function addTagLink(i: number) {
-    setEditTags(prev => prev.map((t, j) => j === i ? { ...t, links: [...t.links, { shop: 'Amazon', url: '' }] } : t))
-  }
-  function updateTagLink(i: number, li: number, field: keyof ShopLink, value: string) {
-    setEditTags(prev => prev.map((t, j) => j === i ? {
-      ...t, links: t.links.map((l, k) => k === li ? { ...l, [field]: value } : l)
-    } : t))
-  }
-  function removeTagLink(i: number, li: number) {
-    setEditTags(prev => prev.map((t, j) => j === i ? { ...t, links: t.links.filter((_, k) => k !== li) } : t))
-  }
-  function removeTag(i: number) { setEditTags(prev => prev.filter((_, j) => j !== i)) }
-  function addTag() { setEditTags(prev => [...prev, { name: '', type: 'peripheral', links: [] }]) }
-
-  function updateComponentName(i: number, name: string) {
-    setEditComponents(prev => prev.map((c, j) => j === i ? { ...c, name } : c))
-  }
   function addComponentLink(i: number) {
     setEditComponents(prev => prev.map((c, j) => j === i ? { ...c, links: [...c.links, { shop: 'Amazon', url: '' }] } : c))
   }
@@ -195,6 +166,9 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
   }
   function removeComponentLink(i: number, li: number) {
     setEditComponents(prev => prev.map((c, j) => j === i ? { ...c, links: c.links.filter((_, k) => k !== li) } : c))
+  }
+  function updateComponentName(i: number, name: string) {
+    setEditComponents(prev => prev.map((c, j) => j === i ? { ...c, name } : c))
   }
   function removeComponent(i: number) { setEditComponents(prev => prev.filter((_, j) => j !== i)) }
   function addComponent() { setEditComponents(prev => [...prev, { name: '', type: 'internal', links: [] }]) }
@@ -217,7 +191,6 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
       }
       const updates = {
         title: editTitle,
-        tags: editTags.filter(t => t.name.trim()),
         components: editComponents.filter(c => c.name.trim()),
         pins: editPins,
         image_url,
@@ -249,46 +222,6 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
     background: 'var(--surface2)', border: '1px solid var(--border)',
     color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 13,
     padding: '8px 12px', borderRadius: 'var(--radius-sm)', outline: 'none', width: '100%',
-  }
-
-  function ComponentEditor({ items, onUpdateName, onAddLink, onUpdateLink, onRemoveLink, onRemove, onAdd, addLabel, placeholder }: {
-    items: Component[]
-    onUpdateName: (i: number, v: string) => void
-    onAddLink: (i: number) => void
-    onUpdateLink: (i: number, li: number, field: keyof ShopLink, value: string) => void
-    onRemoveLink: (i: number, li: number) => void
-    onRemove: (i: number) => void
-    onAdd: () => void
-    addLabel: string
-    placeholder: string
-  }) {
-    return (
-      <div>
-        {items.map((item, i) => (
-          <div key={i} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              <input value={item.name} onChange={e => onUpdateName(i, e.target.value)} placeholder={placeholder} style={{ ...inputStyle, flex: 1 }} />
-              <button onClick={() => onRemove(i)} style={{ background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', borderRadius: 'var(--radius-sm)', padding: '8px 12px', cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>✕</button>
-            </div>
-            {item.links.map((link, li) => (
-              <div key={li} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                <select value={link.shop} onChange={e => onUpdateLink(i, li, 'shop', e.target.value)} style={{ ...inputStyle, width: 'auto', flexShrink: 0 }}>
-                  {SHOPS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <input value={link.url} onChange={e => onUpdateLink(i, li, 'url', e.target.value)} placeholder="https://..." style={{ ...inputStyle, flex: 1 }} />
-                <button onClick={() => onRemoveLink(i, li)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', cursor: 'pointer', flexShrink: 0 }}>✕</button>
-              </div>
-            ))}
-            <button onClick={() => onAddLink(i)} style={{ background: 'transparent', border: '1px dashed var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '6px 12px', cursor: 'pointer', fontSize: 12, width: '100%', marginTop: 4 }}>
-              + Añadir link de compra
-            </button>
-          </div>
-        ))}
-        <button onClick={onAdd} style={{ background: 'var(--tag-bg)', border: '1px dashed var(--tag-border)', color: 'var(--tag-text)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 700, width: '100%', fontFamily: 'var(--font-display)' }}>
-          + {addLabel}
-        </button>
-      </div>
-    )
   }
 
   if (setups.length === 0) {
@@ -369,13 +302,11 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         <div style={{ background: 'var(--surface)', border: '1px solid var(--accent)', borderRadius: 'var(--radius)', padding: 28, marginBottom: 28 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>✏️ Editando: {setup.title}</h2>
 
-          {/* Título */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Título del Setup</label>
             <input value={editTitle} onChange={e => setEditTitle(e.target.value)} style={inputStyle} />
           </div>
 
-          {/* Foto */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Foto del Setup</label>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleImageFile(e.target.files[0])} />
@@ -391,10 +322,10 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
             )}
           </div>
 
-          {/* Pins dentro del panel de edición */}
           {(newImagePreview || setup.image_url) && (
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>📍 Componentes en la imagen</label>
+              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 12 }}>Toca la imagen para marcar cada componente.</p>
               <PinEditor
                 imageUrl={newImagePreview || setup.image_url || ''}
                 pins={editPins}
@@ -405,19 +336,35 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
             </div>
           )}
 
-          {/* Periféricos */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>🖱️ Periféricos y Accesorios</label>
-            <ComponentEditor items={editTags} onUpdateName={updateTagName} onAddLink={addTagLink} onUpdateLink={updateTagLink} onRemoveLink={removeTagLink} onRemove={removeTag} onAdd={addTag} addLabel="Añadir periférico" placeholder="Ej: Keychron K2, LG OLED..." />
-          </div>
-
-          {/* Componentes internos */}
           <div style={{ marginBottom: 24 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>🔧 Componentes Internos del PC</label>
-            <ComponentEditor items={editComponents} onUpdateName={updateComponentName} onAddLink={addComponentLink} onUpdateLink={updateComponentLink} onRemoveLink={removeComponentLink} onRemove={removeComponent} onAdd={addComponent} addLabel="Añadir componente interno" placeholder="Ej: RTX 4090, Ryzen 9 7950X..." />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {editComponents.map((comp, i) => (
+                <div key={i} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                    <input value={comp.name} onChange={e => updateComponentName(i, e.target.value)} placeholder="Ej: RTX 4090, Ryzen 9 7950X..." style={{ ...inputStyle, flex: 1 }} />
+                    <button onClick={() => removeComponent(i)} style={{ background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', borderRadius: 'var(--radius-sm)', padding: '8px 12px', cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>✕</button>
+                  </div>
+                  {comp.links.map((link, li) => (
+                    <div key={li} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                      <select value={link.shop} onChange={e => updateComponentLink(i, li, 'shop', e.target.value)} style={{ ...inputStyle, width: 'auto', flexShrink: 0 }}>
+                        {SHOPS.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <input value={link.url} onChange={e => updateComponentLink(i, li, 'url', e.target.value)} placeholder="https://..." style={{ ...inputStyle, flex: 1 }} />
+                      <button onClick={() => removeComponentLink(i, li)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                    </div>
+                  ))}
+                  <button onClick={() => addComponentLink(i)} style={{ background: 'transparent', border: '1px dashed var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '6px 12px', cursor: 'pointer', fontSize: 12, width: '100%', marginTop: 4 }}>
+                    + Añadir link de compra
+                  </button>
+                </div>
+              ))}
+              <button onClick={addComponent} style={{ background: 'var(--tag-bg)', border: '1px dashed var(--tag-border)', color: 'var(--tag-text)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 700, width: '100%', fontFamily: 'var(--font-display)' }}>
+                + Añadir componente interno
+              </button>
+            </div>
           </div>
 
-          {/* Guardar / Cancelar */}
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={saveChanges} disabled={saving} className="btn-primary" style={{ flex: 1, fontSize: 14, padding: 13, opacity: saving ? 0.6 : 1 }}>
               {saving ? '⏳ Guardando...' : '✓ Guardar cambios'}
@@ -429,7 +376,7 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
 
       {/* ── Setup image con pins (vista) ── */}
       {!editing && (
-        <div style={{ marginBottom: 28, position: 'relative' }}>
+        <div style={{ marginBottom: 28 }}>
           {setup.image_url ? (
             <PinEditor
               imageUrl={setup.image_url}
@@ -444,11 +391,12 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
             </div>
           )}
 
+          {/* Título y acciones */}
           {setup.image_url && (
             <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
               <div>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px' }}>{setup.title}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{setup.category} · {setup.pins?.length || 0} componentes marcados</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{setup.category} · {(setup.pins?.filter(p => p.name).length || 0) + (setup.components?.length || 0)} componentes</div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {!isOwner && (
@@ -486,24 +434,29 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
         </div>
       )}
 
-      {/* ── Periféricos ── */}
-      {!editing && setup.tags && setup.tags.filter(t => typeof t === 'string' ? t !== 'Custom Setup' : t.name).length > 0 && (
+      {/* ── Lista de componentes de la imagen ── */}
+      {!editing && setup.pins && setup.pins.filter(p => p.name).length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🖱️ Periféricos y Accesorios</h2>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>📍 Componentes del Setup</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {setup.tags.filter(t => typeof t === 'string' ? t !== 'Custom Setup' : t.name).map((tag, i) => {
-              const name = typeof tag === 'string' ? tag : tag.name
-              const links = typeof tag === 'string' ? [] : (tag.links || [])
-              const displayLinks = links.length > 0 ? links : [{ shop: 'Amazon', url: makeDefaultLink(name, 'Amazon') }]
+            {setup.pins.filter(p => p.name).map((pin, i) => {
+              const links = pin.links?.length > 0 ? pin.links : [
+                { shop: 'Amazon', url: makeDefaultLink(pin.name, 'Amazon') },
+                { shop: 'PcComponentes', url: makeDefaultLink(pin.name, 'PcComponentes') },
+                { shop: 'MediaMarkt', url: makeDefaultLink(pin.name, 'MediaMarkt') },
+              ]
               return (
                 <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🖱️</div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{name}</div>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11, color: '#0a0a0b' }}>
+                      {i + 1}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{pin.name}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {displayLinks.map((link, li) => (
-                      <a key={li} href={link.url} target="_blank" rel="noopener noreferrer" style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none', letterSpacing: '0.3px' }}>
+                    {links.map((link, li) => (
+                      <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
+                        style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none', letterSpacing: '0.3px' }}>
                         {link.shop} →
                       </a>
                     ))}
@@ -521,8 +474,11 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🔧 Componentes Internos del PC</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {setup.components.map((comp, i) => {
-              const links = comp.links || []
-              const displayLinks = links.length > 0 ? links : [{ shop: 'Amazon', url: makeDefaultLink(comp.name, 'Amazon') }]
+              const links = comp.links?.length > 0 ? comp.links : [
+                { shop: 'Amazon', url: makeDefaultLink(comp.name, 'Amazon') },
+                { shop: 'PcComponentes', url: makeDefaultLink(comp.name, 'PcComponentes') },
+                { shop: 'MediaMarkt', url: makeDefaultLink(comp.name, 'MediaMarkt') },
+              ]
               return (
                 <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
@@ -530,8 +486,9 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
                     <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{comp.name}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {displayLinks.map((link, li) => (
-                      <a key={li} href={link.url} target="_blank" rel="noopener noreferrer" style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none', letterSpacing: '0.3px' }}>
+                    {links.map((link, li) => (
+                      <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
+                        style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none', letterSpacing: '0.3px' }}>
                         {link.shop} →
                       </a>
                     ))}
