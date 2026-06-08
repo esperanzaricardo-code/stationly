@@ -6,7 +6,7 @@ import { Pin, ShopLink } from '@/lib/supabase'
 const SHOPS = ['Amazon', 'PcComponentes', 'MediaMarkt', 'Otro'] as const
 
 function generateLinks(productName: string): ShopLink[] {
-  const query = encodeURIComponent(productName)
+  const query = productName.trim().replace(/\s+/g, '+')
   return [
     { shop: 'Amazon', url: `https://www.amazon.es/s?k=${query}` },
     { shop: 'PcComponentes', url: `https://www.pccomponentes.com/buscar/?query=${query}` },
