@@ -67,12 +67,12 @@ function CategoryPill({ type, category }: { type: string; category?: string }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
       fontSize: 11, fontWeight: 600,
-      background: isInternal ? 'rgba(207,250,124,0.1)' : 'rgba(255,255,255,0.06)',
-      border: `1px solid ${isInternal ? 'rgba(207,250,124,0.3)' : 'rgba(255,255,255,0.1)'}`,
-      color: isInternal ? 'var(--tag-text)' : 'var(--text-muted)',
+      background: isInternal ? 'rgba(207,250,124,0.12)' : 'rgba(255,255,255,0.05)',
+      border: `1px solid ${isInternal ? 'rgba(207,250,124,0.25)' : 'rgba(255,255,255,0.08)'}`,
+      color: isInternal ? '#b8e86a' : '#7a7a8c',
       padding: '2px 8px', borderRadius: 50, flexShrink: 0, whiteSpace: 'nowrap',
     }}>
-      {icon} {label}
+      <span style={{ fontSize: 10 }}>{icon}</span> {label}
     </span>
   )
 }
@@ -329,6 +329,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   }
 
   async function saveChanges() {
+    if (scanResults.length > 0) {
+      const confirm = window.confirm(`Tienes ${scanResults.length} componente${scanResults.length !== 1 ? 's' : ''} detectado${scanResults.length !== 1 ? 's' : ''} sin confirmar. ¿Quieres añadirlos todos antes de guardar?`)
+      if (confirm) {
+        acceptAll()
+        return
+      }
+    }
     setSaving(true)
     try {
       let image_url = setup.image_url
