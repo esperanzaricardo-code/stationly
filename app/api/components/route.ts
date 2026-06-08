@@ -3,41 +3,44 @@ import Anthropic from '@anthropic-ai/sdk'
 
 export async function POST(req: NextRequest) {
   try {
-    const { text } = await req.json()
-    if (!text?.trim()) return NextResponse.json({ error: 'Texto requerido' }, { status: 400 })
+    const { text, imageBase64, mediaType } = await req.json()
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key no configurada' }, { status: 500 })
 
     const client = new Anthropic({ apiKey })
+
+    const prompt = `Analiza los componentes de PC o setup que se mencionan.
+
+Para cada producto:
+1. Normaliza el nombre al nombre oficial completo con marca y modelo
+2. Clasifícalo como "internal" (componentes dentro del PC) o "peripheral" (lo que está fuera)
+3. Añade una subcategoría "category":
+   - "internal": "CPU", "GPU", "RAM", "Placa base", "Almacenamiento", "Fuente de alimentación", "Refrigeración", "Caja"
+   - "peripheral": "Monitor", "Teclado", "Ratón", "Auriculares", "Micrófono", "Webcam", "Altavoces", "Silla", "Escritorio", "Iluminación", "Capturadora", "Interfaz de audio", "Stream Deck", "Otro"
+4. Si reconoces el producto exactamente: "confident": true. NO añadas "did_you_mean"
+5. Si no lo reconoces exactamente pero hay algo similar: "confident": false, "did_you_mean": "nombre sugerido"
+6. Si no reconoces nada parecido: "confident": false, "unknown": true
+
+Responde ÚNICAMENTE con un array JSON. Ejemplo:
+[
+  { "name": "AMD Ryzen 9 7950X", "type": "internal", "category": "CPU", "confident": true },
+  { "name": "Logitech G Pro X Superlight 2", "type": "peripheral", "category": "Ratón", "confident": true },
+  { "name": "Keychron Q1 Pro", "type": "peripheral", "category": "Teclado", "confident": false, "did_you_mean": "Keychron Q1 Pro" },
+  { "name": "cosa rara", "type": "peripheral", "category": "Otro", "confident": false, "unknown": true }
+]`
+
+    const content: Anthropic.MessageParam['content'] = imageBase64
+      ? [
+          { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 } },
+          { type: 'text', text: `Identifica el producto tecnológico de esta imagen y devuélvelo en este formato JSON:\n${prompt}` }
+        ]
+      : [{ type: 'text', text: `${prompt}\n\nComponentes a identificar: "${text}"` }]
+
     const message = await client.messages.create({
       model: 'claude-opus-4-5',
       max_tokens: 1024,
-      messages: [{
-        role: 'user',
-        content: `El usuario ha escrito una lista de componentes de su PC o setup. Puede estar separado por comas, espacios, saltos de línea o sin ningún separador claro.
-
-Texto del usuario: "${text}"
-
-Para cada producto que identifiques:
-1. Normaliza el nombre al nombre oficial completo con marca y modelo
-2. Clasifícalo como "peripheral" o "internal"
-3. Añade una subcategoría "category" según estas opciones:
-   - Si es "internal": "CPU", "GPU", "RAM", "Placa base", "Almacenamiento", "Fuente de alimentación", "Refrigeración", "Caja", "Otro"
-   - Si es "peripheral": "Monitor", "Teclado", "Ratón", "Auriculares", "Micrófono", "Webcam", "Altavoces", "Silla", "Escritorio", "Iluminación", "Capturadora", "Otro"
-4. Si reconoces el producto con confianza, marca "confident": true
-5. Si no reconoces el producto exacto pero hay algo similar, marca "confident": false y añade "did_you_mean" con tu sugerencia
-6. Si no reconoces nada parecido, marca "unknown": true y usa el nombre tal como lo escribió el usuario
-
-Responde ÚNICAMENTE con un array JSON, sin texto adicional. Ejemplo:
-[
-  { "name": "AMD Ryzen 9 7950X", "type": "internal", "category": "CPU", "confident": true },
-  { "name": "NVIDIA GeForce RTX 4090", "type": "internal", "category": "GPU", "confident": true },
-  { "name": "Logitech G Pro X Superlight 2", "type": "peripheral", "category": "Ratón", "confident": true },
-  { "name": "teclado rojo", "type": "peripheral", "category": "Teclado", "confident": false, "did_you_mean": "Teclado mecánico RGB" },
-  { "name": "cosa rara", "type": "peripheral", "category": "Otro", "confident": false, "unknown": true }
-]`
-      }]
+      messages: [{ role: 'user', content }]
     })
 
     const text_response = message.content[0].type === 'text' ? message.content[0].text : ''
