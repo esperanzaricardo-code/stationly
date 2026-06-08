@@ -18,7 +18,13 @@ async function getUserSetups(username: string): Promise<Setup[]> {
   return data
 }
 
-export default async function UserPage({ params }: { params: { username: string } }) {
+export default async function UserPage({
+  params,
+  searchParams,
+}: {
+  params: { username: string }
+  searchParams: { setup?: string }
+}) {
   const username = decodeURIComponent(params.username)
   const setups = await getUserSetups(params.username)
 
@@ -26,7 +32,7 @@ export default async function UserPage({ params }: { params: { username: string 
     <ThemeProvider>
       <AnimatedBackground />
       <Nav />
-      <UserProfile setups={setups} username={username} />
+      <UserProfile setups={setups} username={username} activeSetupId={searchParams.setup} />
       <UploadModal />
     </ThemeProvider>
   )
