@@ -21,17 +21,21 @@ Texto del usuario: "${text}"
 
 Para cada producto que identifiques:
 1. Normaliza el nombre al nombre oficial completo con marca y modelo
-2. Clasifícalo como "peripheral" (monitor, teclado, ratón, auriculares, micrófono, webcam, altavoces, silla, escritorio, iluminación, capturadora) o "internal" (CPU, GPU, RAM, placa base, SSD, HDD, fuente de alimentación, refrigeración, caja)
-3. Si reconoces el producto con confianza, marca "confident": true
-4. Si no reconoces el producto exacto pero hay algo similar, marca "confident": false y añade "did_you_mean" con tu sugerencia
-5. Si no reconoces nada parecido, marca "unknown": true y usa el nombre tal como lo escribió el usuario
+2. Clasifícalo como "peripheral" o "internal"
+3. Añade una subcategoría "category" según estas opciones:
+   - Si es "internal": "CPU", "GPU", "RAM", "Placa base", "Almacenamiento", "Fuente de alimentación", "Refrigeración", "Caja", "Otro"
+   - Si es "peripheral": "Monitor", "Teclado", "Ratón", "Auriculares", "Micrófono", "Webcam", "Altavoces", "Silla", "Escritorio", "Iluminación", "Capturadora", "Otro"
+4. Si reconoces el producto con confianza, marca "confident": true
+5. Si no reconoces el producto exacto pero hay algo similar, marca "confident": false y añade "did_you_mean" con tu sugerencia
+6. Si no reconoces nada parecido, marca "unknown": true y usa el nombre tal como lo escribió el usuario
 
 Responde ÚNICAMENTE con un array JSON, sin texto adicional. Ejemplo:
 [
-  { "name": "NVIDIA GeForce RTX 4090", "type": "internal", "confident": true },
-  { "name": "Logitech G Pro X Superlight 2", "type": "peripheral", "confident": true },
-  { "name": "Keychron Q1 Pro", "type": "peripheral", "confident": false, "did_you_mean": "Keychron Q1" },
-  { "name": "silla gaming", "type": "peripheral", "confident": false, "unknown": true }
+  { "name": "AMD Ryzen 9 7950X", "type": "internal", "category": "CPU", "confident": true },
+  { "name": "NVIDIA GeForce RTX 4090", "type": "internal", "category": "GPU", "confident": true },
+  { "name": "Logitech G Pro X Superlight 2", "type": "peripheral", "category": "Ratón", "confident": true },
+  { "name": "teclado rojo", "type": "peripheral", "category": "Teclado", "confident": false, "did_you_mean": "Teclado mecánico RGB" },
+  { "name": "cosa rara", "type": "peripheral", "category": "Otro", "confident": false, "unknown": true }
 ]`
       }]
     })
