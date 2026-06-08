@@ -17,7 +17,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   'Caja': '🖥️', 'Monitor': '🖥️', 'Teclado': '⌨️', 'Ratón': '🖱️',
   'Auriculares': '🎧', 'Micrófono': '🎙️', 'Webcam': '📷', 'Altavoces': '🔊',
   'Silla': '🪑', 'Escritorio': '🗄️', 'Iluminación': '💡', 'Capturadora': '📡',
-  'Otro': '📦',
+  'Interfaz de audio': '🎚️', 'Stream Deck': '🎛️', 'Otro': '📦',
 }
 
 function hashStr(str: string) {
@@ -59,6 +59,24 @@ function totalComponents(setups: Setup[]) {
   }, 0)
 }
 
+function CategoryPill({ type, category }: { type: string; category?: string }) {
+  const icon = category ? (CATEGORY_ICONS[category] || '📦') : (type === 'internal' ? '🔧' : '🖱️')
+  const label = category || (type === 'internal' ? 'Interno' : 'Periférico')
+  const isInternal = type === 'internal'
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      fontSize: 11, fontWeight: 600,
+      background: isInternal ? 'rgba(207,250,124,0.1)' : 'rgba(255,255,255,0.06)',
+      border: `1px solid ${isInternal ? 'rgba(207,250,124,0.3)' : 'rgba(255,255,255,0.1)'}`,
+      color: isInternal ? 'var(--tag-text)' : 'var(--text-muted)',
+      padding: '2px 8px', borderRadius: 50, flexShrink: 0, whiteSpace: 'nowrap',
+    }}>
+      {icon} {label}
+    </span>
+  )
+}
+
 type Props = { setups: Setup[]; username: string; activeSetupId?: string }
 
 export default function UserProfile({ setups: initialSetups, username, activeSetupId }: Props) {
@@ -87,11 +105,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [rawImagePreview, setRawImagePreview] = useState<string | null>(null)
   const [showCropper, setShowCropper] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const photoScanRef = useRef<HTMLInputElement>(null)
   const [editComponents, setEditComponents] = useState<Component[]>([])
   const [editPins, setEditPins] = useState<Pin[]>([])
 
   const [componentText, setComponentText] = useState('')
   const [scanning, setScanning] = useState(false)
+  const [photoScanning, setPhotoScanning] = useState(false)
   const [scanResults, setScanResults] = useState<Component[]>([])
   const [scanDone, setScanDone] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
@@ -236,6 +256,32 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     }
   }
 
+  async function scanComponentPhoto(file: File) {
+    setPhotoScanning(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = async e => {
+        const dataUrl = e.target?.result as string
+        const base64 = dataUrl.split(',')[1]
+        const mediaType = dataUrl.split(';')[0].split(':')[1]
+        const res = await fetch('/api/components', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: base64, mediaType }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
+        setScanResults(prev => [...prev, ...data.components])
+        setScanDone(true)
+        setPhotoScanning(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Error al identificar')
+      setPhotoScanning(false)
+    }
+  }
+
   function acceptComponent(comp: Component) {
     const withLinks = { ...comp, links: generateLinks(comp.name), confident: undefined, did_you_mean: undefined, unknown: undefined }
     setEditComponents(prev => [...prev, withLinks])
@@ -339,22 +385,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     padding: '8px 12px', borderRadius: 'var(--radius-sm)', outline: 'none', width: '100%',
   }
 
-  function CategoryPill({ type, category }: { type: string; category?: string }) {
-    const icon = category ? (CATEGORY_ICONS[category] || '📦') : (type === 'internal' ? '🔧' : '🖱️')
-    const label = category || (type === 'internal' ? 'Interno' : 'Periférico')
-    return (
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
-        fontSize: 11, background: type === 'internal' ? 'var(--tag-bg)' : 'var(--surface2)',
-        border: `1px solid ${type === 'internal' ? 'var(--tag-border)' : 'var(--border)'}`,
-        color: type === 'internal' ? 'var(--tag-text)' : 'var(--text-muted)',
-        padding: '2px 8px', borderRadius: 50, flexShrink: 0, whiteSpace: 'nowrap',
-      }}>
-        {icon} {label}
-      </span>
-    )
-  }
-
   if (setups.length === 0) {
     return (
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
@@ -378,6 +408,9 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       </div>
     )
   }
+
+  const internals = setup.components?.filter(c => c.type === 'internal' && c.name.trim()) || []
+  const peripherals = setup.components?.filter(c => c.type === 'peripheral' && c.name.trim()) || []
 
   return (
     <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
@@ -461,13 +494,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             )}
           </div>
 
-          {/* Campo de texto libre */}
+          {/* Campo de texto libre + foto */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>🖥️ Añadir Componentes</label>
             <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>
               Escribe tus componentes como quieras. La IA los identificará y clasificará automáticamente.
             </p>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <textarea
                 value={componentText}
                 onChange={e => setComponentText(e.target.value)}
@@ -480,6 +513,14 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                 {scanning ? '⏳' : '✦ Analizar'}
               </button>
             </div>
+
+            {/* Botón foto complementario */}
+            <input ref={photoScanRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+              onChange={e => e.target.files?.[0] && scanComponentPhoto(e.target.files[0])} />
+            <button onClick={() => photoScanRef.current?.click()} disabled={photoScanning}
+              style={{ background: 'transparent', border: '1px dashed var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '8px 14px', cursor: 'pointer', fontSize: 12, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: photoScanning ? 0.5 : 1 }}>
+              {photoScanning ? '⏳ Identificando...' : '📷 ¿No sabes el nombre? Haz una foto al componente'}
+            </button>
 
             {/* Resultados */}
             {scanDone && scanResults.length > 0 && (
@@ -505,12 +546,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                             <input
                               value={comp.name}
                               onChange={e => updateScanResultName(i, e.target.value)}
-                              style={{
-                                background: 'transparent', border: 'none', borderBottom: '1px dashed var(--border)',
-                                color: comp.unknown ? '#ff4d6d' : 'var(--text)', fontSize: 13, fontWeight: 600,
-                                outline: 'none', flex: 1, minWidth: 0, cursor: 'text',
-                                fontFamily: 'var(--font-display)', padding: '2px 4px',
-                              }}
+                              style={{ background: 'transparent', border: 'none', borderBottom: '1px dashed var(--border)', color: comp.unknown ? '#ff4d6d' : 'var(--text)', fontSize: 13, fontWeight: 600, outline: 'none', flex: 1, minWidth: 0, cursor: 'text', fontFamily: 'var(--font-display)', padding: '2px 4px' }}
                             />
                             <span style={{ fontSize: 11, color: 'var(--text-dim)', flexShrink: 0 }}>✏️</span>
                           </div>
@@ -554,20 +590,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
                     <CategoryPill type={comp.type} category={comp.category} />
                     {editingIndex === i ? (
-                      <input
-                        value={editingName}
-                        onChange={e => setEditingName(e.target.value)}
+                      <input value={editingName} onChange={e => setEditingName(e.target.value)}
                         onBlur={confirmEditingComponent}
                         onKeyDown={e => { if (e.key === 'Enter') confirmEditingComponent(); if (e.key === 'Escape') setEditingIndex(null) }}
-                        autoFocus
-                        style={{ ...inputStyle, flex: 1, padding: '4px 8px' }}
-                      />
+                        autoFocus style={{ ...inputStyle, flex: 1, padding: '4px 8px' }} />
                     ) : (
-                      <span
-                        onClick={() => startEditingComponent(i, comp.name)}
-                        title="Haz clic para editar"
-                        style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)', cursor: 'text' }}
-                      >
+                      <span onClick={() => startEditingComponent(i, comp.name)} title="Haz clic para editar"
+                        style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)', cursor: 'text' }}>
                         {comp.name}
                       </span>
                     )}
@@ -668,7 +697,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {links.map((link, li) => (
                       <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
-                        style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none', letterSpacing: '0.3px' }}>
+                        style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>
                         {link.shop} →
                       </a>
                     ))}
@@ -680,12 +709,12 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         </div>
       )}
 
-      {/* ── Componentes ── */}
-      {!editing && setup.components && setup.components.length > 0 && (
+      {/* ── Periféricos ── */}
+      {!editing && peripherals.length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🔧 Componentes</h2>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🖱️ Periféricos y Accesorios</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {setup.components.map((comp, i) => {
+            {peripherals.map((comp, i) => {
               const links = comp.links?.length > 0 ? comp.links : generateLinks(comp.name)
               return (
                 <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
@@ -696,7 +725,35 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {links.map((link, li) => (
                       <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
-                        style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none', letterSpacing: '0.3px' }}>
+                        style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>
+                        {link.shop} →
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Componentes internos ── */}
+      {!editing && internals.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🔧 Componentes Internos del PC</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {internals.map((comp, i) => {
+              const links = comp.links?.length > 0 ? comp.links : generateLinks(comp.name)
+              return (
+                <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                    <CategoryPill type={comp.type} category={comp.category} />
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{comp.name}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {links.map((link, li) => (
+                      <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
+                        style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>
                         {link.shop} →
                       </a>
                     ))}
