@@ -11,6 +11,15 @@ const AVATAR_GRADIENTS = [
   ['#60a5fa','#3b82f6'], ['#f472b6','#ec4899'],
 ]
 
+const CATEGORY_ICONS: Record<string, string> = {
+  'CPU': '⚙️', 'GPU': '🎮', 'RAM': '💾', 'Placa base': '🔌',
+  'Almacenamiento': '💿', 'Fuente de alimentación': '⚡', 'Refrigeración': '❄️',
+  'Caja': '🖥️', 'Monitor': '🖥️', 'Teclado': '⌨️', 'Ratón': '🖱️',
+  'Auriculares': '🎧', 'Micrófono': '🎙️', 'Webcam': '📷', 'Altavoces': '🔊',
+  'Silla': '🪑', 'Escritorio': '🗄️', 'Iluminación': '💡', 'Capturadora': '📡',
+  'Otro': '📦',
+}
+
 function hashStr(str: string) {
   let h = 0
   for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0
@@ -85,6 +94,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [scanning, setScanning] = useState(false)
   const [scanResults, setScanResults] = useState<Component[]>([])
   const [scanDone, setScanDone] = useState(false)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editingName, setEditingName] = useState('')
 
   const setup = setups[activeSetup]
 
@@ -175,6 +186,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setScanResults([])
     setScanDone(false)
     setShowAdvanced(false)
+    setEditingIndex(null)
   }
 
   function handleImageFile(file: File) {
@@ -232,7 +244,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
 
   function acceptSuggestion(comp: Component) {
     const name = comp.did_you_mean || comp.name
-    const withLinks = { name, type: comp.type, links: generateLinks(name) }
+    const withLinks = { name, type: comp.type, category: comp.category, links: generateLinks(name) }
     setEditComponents(prev => [...prev, withLinks])
     setScanResults(prev => prev.filter(c => c.name !== comp.name))
   }
@@ -244,14 +256,30 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   function acceptAll() {
     const accepted = scanResults.map(comp => {
       const name = comp.did_you_mean || comp.name
-      return { name, type: comp.type, links: generateLinks(name) }
+      return { name, type: comp.type, category: comp.category, links: generateLinks(name) }
     })
     setEditComponents(prev => [...prev, ...accepted])
     setScanResults([])
   }
 
+  function updateScanResultName(index: number, name: string) {
+    setScanResults(prev => prev.map((c, i) => i === index ? { ...c, name } : c))
+  }
+
   function removeComponent(i: number) {
     setEditComponents(prev => prev.filter((_, j) => j !== i))
+  }
+
+  function startEditingComponent(i: number, name: string) {
+    setEditingIndex(i)
+    setEditingName(name)
+  }
+
+  function confirmEditingComponent() {
+    if (editingIndex === null) return
+    setEditComponents(prev => prev.map((c, i) => i === editingIndex ? { ...c, name: editingName, links: generateLinks(editingName) } : c))
+    setEditingIndex(null)
+    setEditingName('')
   }
 
   async function saveChanges() {
@@ -309,6 +337,22 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     background: 'var(--surface2)', border: '1px solid var(--border)',
     color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 13,
     padding: '8px 12px', borderRadius: 'var(--radius-sm)', outline: 'none', width: '100%',
+  }
+
+  function CategoryPill({ type, category }: { type: string; category?: string }) {
+    const icon = category ? (CATEGORY_ICONS[category] || '📦') : (type === 'internal' ? '🔧' : '🖱️')
+    const label = category || (type === 'internal' ? 'Interno' : 'Periférico')
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        fontSize: 11, background: type === 'internal' ? 'var(--tag-bg)' : 'var(--surface2)',
+        border: `1px solid ${type === 'internal' ? 'var(--tag-border)' : 'var(--border)'}`,
+        color: type === 'internal' ? 'var(--tag-text)' : 'var(--text-muted)',
+        padding: '2px 8px', borderRadius: 50, flexShrink: 0, whiteSpace: 'nowrap',
+      }}>
+        {icon} {label}
+      </span>
+    )
   }
 
   if (setups.length === 0) {
@@ -398,39 +442,16 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
           {/* Foto */}
           <div style={{ marginBottom: 20 }}>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleImageFile(e.target.files[0])} />
-
             {showCropper && rawImagePreview ? (
-              <ImageCropper
-                src={rawImagePreview}
-                onCrop={handleCropDone}
-                onCancel={handleCropCancel}
-              />
+              <ImageCropper src={rawImagePreview} onCrop={handleCropDone} onCancel={handleCropCancel} />
             ) : newImagePreview || setup.image_url ? (
               <div style={{ position: 'relative', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
-                <img
-                  src={newImagePreview || setup.image_url || ''}
-                  alt="Setup"
-                  style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' }}
-                />
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  style={{
-                    position: 'absolute', top: 10, right: 10,
-                    background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none',
-                    borderRadius: 8, fontSize: 12, padding: '6px 12px',
-                    cursor: 'pointer', backdropFilter: 'blur(4px)',
-                    fontFamily: 'var(--font-display)', fontWeight: 600,
-                  }}
-                >
+                <img src={newImagePreview || setup.image_url || ''} alt="Setup" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' }} />
+                <button onClick={() => fileRef.current?.click()} style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, padding: '6px 12px', cursor: 'pointer', backdropFilter: 'blur(4px)', fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                   📸 Cambiar foto
                 </button>
                 {newImagePreview && (
-                  <button
-                    onClick={() => { setNewImageFile(null); setNewImagePreview(null) }}
-                    style={{ position: 'absolute', top: 10, right: 120, background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', width: 28, height: 28, borderRadius: '50%', fontSize: 14, cursor: 'pointer' }}
-                  >
-                    ✕
-                  </button>
+                  <button onClick={() => { setNewImageFile(null); setNewImagePreview(null) }} style={{ position: 'absolute', top: 10, right: 120, background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', width: 28, height: 28, borderRadius: '50%', fontSize: 14, cursor: 'pointer' }}>✕</button>
                 )}
               </div>
             ) : (
@@ -440,11 +461,9 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             )}
           </div>
 
-          {/* Campo de texto libre para componentes */}
+          {/* Campo de texto libre */}
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>
-              🖥️ Añadir Componentes
-            </label>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>🖥️ Añadir Componentes</label>
             <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>
               Escribe tus componentes como quieras. La IA los identificará y clasificará automáticamente.
             </p>
@@ -456,20 +475,16 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                 rows={3}
                 style={{ ...inputStyle, resize: 'vertical', flex: 1 }}
               />
-              <button
-                onClick={scanComponents}
-                disabled={scanning || !componentText.trim()}
-                className="btn-primary"
-                style={{ fontSize: 13, padding: '0 16px', opacity: scanning || !componentText.trim() ? 0.5 : 1, flexShrink: 0, alignSelf: 'flex-start', height: 42 }}
-              >
+              <button onClick={scanComponents} disabled={scanning || !componentText.trim()} className="btn-primary"
+                style={{ fontSize: 13, padding: '0 16px', opacity: scanning || !componentText.trim() ? 0.5 : 1, flexShrink: 0, alignSelf: 'flex-start', height: 42 }}>
                 {scanning ? '⏳' : '✦ Analizar'}
               </button>
             </div>
 
-            {/* Resultados del análisis */}
+            {/* Resultados */}
             {scanDone && scanResults.length > 0 && (
               <div style={{ marginTop: 12, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
                     ✦ {scanResults.length} componente{scanResults.length !== 1 ? 's' : ''} detectado{scanResults.length !== 1 ? 's' : ''}
                   </div>
@@ -477,21 +492,30 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                     ✓ Aceptar todos
                   </button>
                 </div>
+                <p style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 10 }}>
+                  ✏️ Haz clic en el nombre para editarlo si la IA se ha equivocado
+                </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {scanResults.map((comp, i) => (
                     <div key={i} style={{ background: 'var(--surface)', border: `1px solid ${comp.unknown ? 'rgba(255,77,109,0.3)' : comp.confident === false ? 'rgba(207,250,124,0.3)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: comp.did_you_mean ? 4 : 0 }}>
-                            <span style={{ fontSize: 11, background: comp.type === 'internal' ? 'var(--tag-bg)' : 'var(--surface2)', border: '1px solid var(--border)', color: comp.type === 'internal' ? 'var(--tag-text)' : 'var(--text-muted)', padding: '2px 8px', borderRadius: 50, flexShrink: 0 }}>
-                              {comp.type === 'internal' ? '🔧 Interno' : '🖱️ Periférico'}
-                            </span>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: comp.unknown ? '#ff4d6d' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {comp.name}
-                            </span>
+                            <CategoryPill type={comp.type} category={comp.category} />
+                            <input
+                              value={comp.name}
+                              onChange={e => updateScanResultName(i, e.target.value)}
+                              style={{
+                                background: 'transparent', border: 'none', borderBottom: '1px dashed var(--border)',
+                                color: comp.unknown ? '#ff4d6d' : 'var(--text)', fontSize: 13, fontWeight: 600,
+                                outline: 'none', flex: 1, minWidth: 0, cursor: 'text',
+                                fontFamily: 'var(--font-display)', padding: '2px 4px',
+                              }}
+                            />
+                            <span style={{ fontSize: 11, color: 'var(--text-dim)', flexShrink: 0 }}>✏️</span>
                           </div>
                           {comp.did_you_mean && (
-                            <div style={{ fontSize: 12, color: 'var(--tag-text)', marginTop: 2 }}>
+                            <div style={{ fontSize: 12, color: 'var(--tag-text)', marginTop: 4 }}>
                               💡 ¿Te refieres a: <strong>{comp.did_you_mean}</strong>?
                             </div>
                           )}
@@ -503,13 +527,9 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                           <button onClick={() => comp.did_you_mean ? acceptSuggestion(comp) : acceptComponent(comp)}
-                            style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', border: 'none', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>
-                            ✓
-                          </button>
+                            style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', border: 'none', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>✓</button>
                           <button onClick={() => rejectComponent(comp)}
-                            style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>
-                            ✕
-                          </button>
+                            style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>✕</button>
                         </div>
                       </div>
                     </div>
@@ -532,8 +552,26 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {editComponents.map((comp, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
-                    <span style={{ fontSize: 16, flexShrink: 0 }}>{comp.type === 'internal' ? '🔧' : '🖱️'}</span>
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{comp.name}</span>
+                    <CategoryPill type={comp.type} category={comp.category} />
+                    {editingIndex === i ? (
+                      <input
+                        value={editingName}
+                        onChange={e => setEditingName(e.target.value)}
+                        onBlur={confirmEditingComponent}
+                        onKeyDown={e => { if (e.key === 'Enter') confirmEditingComponent(); if (e.key === 'Escape') setEditingIndex(null) }}
+                        autoFocus
+                        style={{ ...inputStyle, flex: 1, padding: '4px 8px' }}
+                      />
+                    ) : (
+                      <span
+                        onClick={() => startEditingComponent(i, comp.name)}
+                        title="Haz clic para editar"
+                        style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)', cursor: 'text' }}
+                      >
+                        {comp.name}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 11, color: 'var(--text-dim)', cursor: 'pointer' }} onClick={() => startEditingComponent(i, comp.name)}>✏️</span>
                     <button onClick={() => removeComponent(i)} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>✕</button>
                   </div>
                 ))}
@@ -541,26 +579,17 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             </div>
           )}
 
-          {/* Opciones avanzadas — Pins */}
+          {/* Pins — opciones avanzadas */}
           <div style={{ marginBottom: 24 }}>
-            <button
-              onClick={() => setShowAdvanced(v => !v)}
-              style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', cursor: 'pointer', fontSize: 13, width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-            >
+            <button onClick={() => setShowAdvanced(v => !v)}
+              style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', cursor: 'pointer', fontSize: 13, width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>📍 Marcar componentes en la imagen <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>(opcional)</span></span>
               <span>{showAdvanced ? '▲' : '▼'}</span>
             </button>
-
             {showAdvanced && (newImagePreview || setup.image_url) && (
               <div style={{ marginTop: 12 }}>
                 <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>Toca la imagen para añadir un pin en cada componente visible.</p>
-                <PinEditor
-                  imageUrl={newImagePreview || setup.image_url || ''}
-                  pins={editPins}
-                  isOwner={isOwner}
-                  editing={true}
-                  onChange={setEditPins}
-                />
+                <PinEditor imageUrl={newImagePreview || setup.image_url || ''} pins={editPins} isOwner={isOwner} editing={true} onChange={setEditPins} />
               </div>
             )}
           </div>
@@ -579,19 +608,12 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       {!editing && (
         <div style={{ marginBottom: 28 }}>
           {setup.image_url ? (
-            <PinEditor
-              imageUrl={setup.image_url}
-              pins={setup.pins || []}
-              isOwner={isOwner}
-              editing={false}
-              onChange={setEditPins}
-            />
+            <PinEditor imageUrl={setup.image_url} pins={setup.pins || []} isOwner={isOwner} editing={false} onChange={setEditPins} />
           ) : (
             <div style={{ width: '100%', aspectRatio: '4/3', borderRadius: 'var(--radius)', background: `linear-gradient(135deg, ${pc[0]}, ${pc[1]}, ${pc[2]})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, border: '1px solid var(--border)' }}>
               🖥️
             </div>
           )}
-
           {setup.image_url && (
             <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
               <div>
@@ -603,14 +625,10 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                   <div style={{ position: 'relative' }}>
                     {!showReport[setup.id] ? (
                       <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: true }))}
-                        style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', width: 36, height: 36, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        ⚑
-                      </button>
+                        style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', width: 36, height: 36, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚑</button>
                     ) : (
                       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140, position: 'absolute', right: 0, top: 40, zIndex: 10 }}>
-                        <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>
-                          {reported[setup.id] ? '✓ Reportado' : '¿Reportar este setup?'}
-                        </span>
+                        <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>{reported[setup.id] ? '✓ Reportado' : '¿Reportar este setup?'}</span>
                         {!reported[setup.id] && (
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button onClick={() => handleReport(setup.id, setup.user_name)} style={{ flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Reportar</button>
@@ -623,9 +641,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                 )}
                 <button onClick={() => toggleLike(setup.id)}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, background: liked[setup.id] ? 'rgba(255,77,109,0.1)' : 'var(--surface2)', border: `1px solid ${liked[setup.id] ? 'rgba(255,77,109,0.5)' : 'var(--border)'}`, color: liked[setup.id] ? '#ff4d6d' : 'var(--text-muted)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, padding: '7px 14px', borderRadius: 50, cursor: 'pointer', transition: 'all 0.18s' }}>
-                  <span style={{ fontSize: 14, transition: 'transform 0.2s', transform: liked[setup.id] ? 'scale(1.25)' : 'scale(1)' }}>
-                    {liked[setup.id] ? '♥' : '♡'}
-                  </span>
+                  <span style={{ fontSize: 14, transition: 'transform 0.2s', transform: liked[setup.id] ? 'scale(1.25)' : 'scale(1)' }}>{liked[setup.id] ? '♥' : '♡'}</span>
                   {likes[setup.id] || 0}
                 </button>
               </div>
@@ -634,7 +650,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         </div>
       )}
 
-      {/* ── Lista de componentes de la imagen (pins) ── */}
+      {/* ── Pins ── */}
       {!editing && setup.pins && setup.pins.filter(p => p.name).length > 0 && (
         <div style={{ marginBottom: 32 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>📍 Componentes del Setup</h2>
@@ -673,10 +689,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
               const links = comp.links?.length > 0 ? comp.links : generateLinks(comp.name)
               return (
                 <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-                      {comp.type === 'internal' ? '🔧' : '🖱️'}
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                    <CategoryPill type={comp.type} category={comp.category} />
                     <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{comp.name}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
