@@ -43,11 +43,15 @@ function totalComponents(setups: Setup[]) {
 
 const SHOPS = ['Amazon', 'PcComponentes', 'MediaMarkt', 'Otro'] as const
 
-type Props = { setups: Setup[]; username: string }
+type Props = { setups: Setup[]; username: string; activeSetupId?: string }
 
-export default function UserProfile({ setups: initialSetups, username }: Props) {
+export default function UserProfile({ setups: initialSetups, username, activeSetupId }: Props) {
   const [setups, setSetups] = useState(initialSetups)
-  const [activeSetup, setActiveSetup] = useState(0)
+  const [activeSetup, setActiveSetup] = useState(() => {
+    if (!activeSetupId) return 0
+    const index = initialSetups.findIndex(s => s.id === activeSetupId)
+    return index >= 0 ? index : 0
+  })
   const [isOwner, setIsOwner] = useState(false)
   const [sessionToken, setSessionToken] = useState('')
   const [editing, setEditing] = useState(false)
