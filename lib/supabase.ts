@@ -13,6 +13,7 @@ export type ShopLink = {
 export type Component = {
   name: string
   type: 'peripheral' | 'internal'
+  category?: string
   links: ShopLink[]
   confident?: boolean
   did_you_mean?: string
