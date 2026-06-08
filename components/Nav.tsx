@@ -51,18 +51,34 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
         background: 'var(--nav-bg)', backdropFilter: 'blur(20px)',
         borderBottom: '1px solid var(--border)',
       }}>
-        {/* Logo */}
-        <Link href={loggedIn ? '/feed' : '/'} style={{ textDecoration: 'none' }}>
-          <span style={{
-            fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22,
-            letterSpacing: '-0.5px', color: 'var(--text)',
+        {/* Logo + Beta */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Link href={loggedIn ? '/feed' : '/'} style={{ textDecoration: 'none' }}>
+            <span style={{
+              fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22,
+              letterSpacing: '-0.5px', color: 'var(--text)',
+            }}>
+              Station<span style={{
+                background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>ly</span>
+            </span>
+          </Link>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            background: 'var(--tag-bg)', border: '1px solid var(--tag-border)',
+            color: 'var(--tag-text)', fontSize: 10, fontWeight: 700,
+            letterSpacing: '1px', textTransform: 'uppercase',
+            padding: '3px 8px', borderRadius: 50,
           }}>
-            Station<span style={{
-              background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            }}>ly</span>
-          </span>
-        </Link>
+            <span style={{
+              width: 5, height: 5, borderRadius: '50%',
+              background: 'var(--accent)', display: 'inline-block',
+              animation: 'pulse 2s ease infinite',
+            }} />
+            Beta
+          </div>
+        </div>
 
         {/* Desktop */}
         <div className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -111,7 +127,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
           </button>
         </div>
 
-        {/* Mobile — hamburguesa */}
+        {/* Mobile */}
         <div className="nav-mobile" style={{ display: 'none', alignItems: 'center', gap: 8 }}>
           <button onClick={toggle} style={{
             background: 'var(--surface2)', border: '1px solid var(--border)',
@@ -139,7 +155,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
         `}</style>
       </nav>
 
-      {/* Mobile menu desplegable */}
+      {/* Mobile menu */}
       {menuOpen && (
         <div style={{
           position: 'fixed', top: 64, left: 0, right: 0, zIndex: 99,
