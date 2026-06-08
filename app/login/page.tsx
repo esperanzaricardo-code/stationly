@@ -16,10 +16,20 @@ function LoginForm() {
   const [success, setSuccess] = useState('')
   const router = useRouter()
 
+  function handleUsernameChange(value: string) {
+    // No permitir espacios, solo letras, números, guiones y guiones bajos
+    const clean = value.replace(/[^a-zA-Z0-9_-]/g, '')
+    setUsername(clean)
+  }
+
   async function handleSubmit() {
     setError(''); setSuccess('')
     if (!email || !password) { setError('Rellena todos los campos'); return }
-    if (mode === 'register' && !username) { setError('Elige un nombre de usuario'); return }
+    if (mode === 'register') {
+      if (!username) { setError('Elige un nombre de usuario'); return }
+      if (username.length < 3) { setError('El nombre de usuario debe tener al menos 3 caracteres'); return }
+      if (username.length > 20) { setError('El nombre de usuario no puede tener más de 20 caracteres'); return }
+    }
     setLoading(true)
     try {
       if (mode === 'login') {
@@ -74,8 +84,16 @@ function LoginForm() {
         {mode === 'register' && (
           <div style={{ marginBottom: 14 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Nombre de usuario</label>
-            <input value={username} onChange={e => setUsername(e.target.value)} placeholder="NightOwl, StreamQueen..."
-              style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 14, padding: '11px 14px', borderRadius: 'var(--radius-sm)', outline: 'none' }} />
+            <input
+              value={username}
+              onChange={e => handleUsernameChange(e.target.value)}
+              placeholder="Ej: NightOwl, StreamQueen..."
+              maxLength={20}
+              style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 14, padding: '11px 14px', borderRadius: 'var(--radius-sm)', outline: 'none' }}
+            />
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 5 }}>
+              Solo letras, números, - y _. Sin espacios. {username.length}/20
+            </div>
           </div>
         )}
 
@@ -85,9 +103,13 @@ function LoginForm() {
         ].map(f => (
           <div key={f.label} style={{ marginBottom: 14 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>{f.label}</label>
-            <input type={f.type} value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.placeholder}
+            <input
+              type={f.type} value={f.value}
+              onChange={e => f.set(e.target.value)}
+              placeholder={f.placeholder}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-              style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 14, padding: '11px 14px', borderRadius: 'var(--radius-sm)', outline: 'none' }} />
+              style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 14, padding: '11px 14px', borderRadius: 'var(--radius-sm)', outline: 'none' }}
+            />
           </div>
         ))}
 
