@@ -60,7 +60,7 @@ export default function LandingNav() {
             background: 'var(--tag-bg)', border: '1px solid var(--tag-border)',
             color: 'var(--tag-text)', fontSize: 10, fontWeight: 700,
             letterSpacing: '1px', textTransform: 'uppercase',
-            padding: '3px 8px', borderRadius: 50, marginTop: 2,
+            padding: '3px 8px', borderRadius: 50, marginTop: 3,
           }}>
             <span style={{
               width: 5, height: 5, borderRadius: '50%',
