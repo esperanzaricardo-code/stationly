@@ -59,7 +59,7 @@ export default function SetupCard({ setup }: { setup: Setup }) {
   const [showReport, setShowReport] = useState(false)
 
   function handleCardClick() {
-    router.push(`/u/${encodeURIComponent(setup.user_name)}`)
+    router.push(`/u/${encodeURIComponent(setup.user_name)}?setup=${setup.id}`)
   }
 
   async function toggleLike(e: React.MouseEvent) {
