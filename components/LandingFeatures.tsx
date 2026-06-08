@@ -110,7 +110,7 @@ export default function LandingFeatures() {
 
       {/* Disclaimer afiliados */}
       <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-dim)', marginTop: 24, lineHeight: 1.5 }}>
-        * Consulta nuestros <a href="/legal/terminos" style={{ color: 'var(--tag-text)', textDecoration: 'none' }}>términos y condiciones</a> para más información sobre el programa de afiliados de nuestros colaboradores.
+        * Consulta nuestros <a href="/legal/terminos" style={{ color: 'var(--tag-text)', textDecoration: 'none' }}>términos y condiciones</a> para más información hola sobre el programa de afiliados de nuestros colaboradores.
       </p>
     </section>
   )
