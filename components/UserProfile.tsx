@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Setup, Component, ShopLink, Pin } from '@/lib/supabase'
 import { supabase } from '@/lib/supabase'
 import PinEditor from './PinEditor'
+import ImageCropper from './ImageCropper'
 
 const AVATAR_GRADIENTS = [
   ['#CFFA7C','#9CE89D'], ['#f43f5e','#fb923c'], ['#06b6d4','#6366f1'],
@@ -74,6 +75,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [editTitle, setEditTitle] = useState('')
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null)
+  const [rawImagePreview, setRawImagePreview] = useState<string | null>(null)
+  const [showCropper, setShowCropper] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [editComponents, setEditComponents] = useState<Component[]>([])
   const [editPins, setEditPins] = useState<Pin[]>([])
@@ -154,6 +157,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setEditPins(setup.pins || [])
     setNewImageFile(null)
     setNewImagePreview(null)
+    setRawImagePreview(null)
+    setShowCropper(false)
     setComponentText('')
     setScanResults([])
     setScanDone(false)
@@ -165,6 +170,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setEditing(false)
     setNewImageFile(null)
     setNewImagePreview(null)
+    setRawImagePreview(null)
+    setShowCropper(false)
     setScanResults([])
     setScanDone(false)
     setShowAdvanced(false)
@@ -175,8 +182,24 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     if (file.size > 10 * 1024 * 1024) { alert('Máximo 10MB'); return }
     setNewImageFile(file)
     const reader = new FileReader()
-    reader.onload = e => setNewImagePreview(e.target?.result as string)
+    reader.onload = e => {
+      setRawImagePreview(e.target?.result as string)
+      setShowCropper(true)
+    }
     reader.readAsDataURL(file)
+  }
+
+  function handleCropDone(dataUrl: string) {
+    setNewImagePreview(dataUrl)
+    setRawImagePreview(null)
+    setShowCropper(false)
+  }
+
+  function handleCropCancel() {
+    setRawImagePreview(null)
+    setNewImageFile(null)
+    setShowCropper(false)
+    if (fileRef.current) fileRef.current.value = ''
   }
 
   async function scanComponents() {
@@ -235,13 +258,15 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setSaving(true)
     try {
       let image_url = setup.image_url
-      if (newImageFile) {
-        const arrayBuffer = await newImageFile.arrayBuffer()
-        const buffer = new Uint8Array(arrayBuffer)
+      if (newImageFile && newImagePreview) {
+        const res = await fetch(newImagePreview)
+        const blob = await res.blob()
         const ext = newImageFile.name.split('.').pop() || 'jpg'
         const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const arrayBuffer = await blob.arrayBuffer()
+        const buffer = new Uint8Array(arrayBuffer)
         const { error: uploadError } = await supabase.storage
-          .from('setups').upload(filename, buffer, { contentType: newImageFile.type, upsert: false })
+          .from('setups').upload(filename, buffer, { contentType: 'image/jpeg', upsert: false })
         if (!uploadError) {
           const { data: urlData } = supabase.storage.from('setups').getPublicUrl(filename)
           image_url = urlData.publicUrl
@@ -264,6 +289,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       setEditing(false)
       setNewImageFile(null)
       setNewImagePreview(null)
+      setRawImagePreview(null)
+      setShowCropper(false)
       setScanResults([])
       setScanDone(false)
     } catch (err: unknown) {
@@ -368,10 +395,17 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             <input value={editTitle} onChange={e => setEditTitle(e.target.value)} style={inputStyle} />
           </div>
 
-          {/* Foto con botón de cambiar como overlay */}
+          {/* Foto */}
           <div style={{ marginBottom: 20 }}>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleImageFile(e.target.files[0])} />
-            {newImagePreview || setup.image_url ? (
+
+            {showCropper && rawImagePreview ? (
+              <ImageCropper
+                src={rawImagePreview}
+                onCrop={handleCropDone}
+                onCancel={handleCropCancel}
+              />
+            ) : newImagePreview || setup.image_url ? (
               <div style={{ position: 'relative', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
                 <img
                   src={newImagePreview || setup.image_url || ''}
