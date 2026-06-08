@@ -22,11 +22,19 @@ function getAvatarGradient(user: string) {
 }
 
 function makeDefaultLink(component: string, shop: string) {
-  const query = encodeURIComponent(component)
+  const query = component.trim().replace(/\s+/g, '+')
   if (shop === 'Amazon') return `https://www.amazon.es/s?k=${query}`
   if (shop === 'PcComponentes') return `https://www.pccomponentes.com/buscar/?query=${query}`
   if (shop === 'MediaMarkt') return `https://www.mediamarkt.es/es/search.html?query=${query}`
   return ''
+}
+
+function generateLinks(name: string): ShopLink[] {
+  return [
+    { shop: 'Amazon', url: makeDefaultLink(name, 'Amazon') },
+    { shop: 'PcComponentes', url: makeDefaultLink(name, 'PcComponentes') },
+    { shop: 'MediaMarkt', url: makeDefaultLink(name, 'MediaMarkt') },
+  ]
 }
 
 function totalLikes(setups: Setup[]) {
@@ -40,8 +48,6 @@ function totalComponents(setups: Setup[]) {
     return a + pins.length + components.length
   }, 0)
 }
-
-const SHOPS = ['Amazon', 'PcComponentes', 'MediaMarkt', 'Otro'] as const
 
 type Props = { setups: Setup[]; username: string; activeSetupId?: string }
 
@@ -70,6 +76,12 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const fileRef = useRef<HTMLInputElement>(null)
   const [editComponents, setEditComponents] = useState<Component[]>([])
   const [editPins, setEditPins] = useState<Pin[]>([])
+
+  // Nuevo flujo de texto libre
+  const [componentText, setComponentText] = useState('')
+  const [scanning, setScanning] = useState(false)
+  const [scanResults, setScanResults] = useState<Component[]>([])
+  const [scanDone, setScanDone] = useState(false)
 
   const setup = setups[activeSetup]
 
@@ -142,6 +154,9 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setEditPins(setup.pins || [])
     setNewImageFile(null)
     setNewImagePreview(null)
+    setComponentText('')
+    setScanResults([])
+    setScanDone(false)
     setEditing(true)
   }
 
@@ -149,6 +164,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setEditing(false)
     setNewImageFile(null)
     setNewImagePreview(null)
+    setScanResults([])
+    setScanDone(false)
   }
 
   function handleImageFile(file: File) {
@@ -160,22 +177,57 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     reader.readAsDataURL(file)
   }
 
-  function addComponentLink(i: number) {
-    setEditComponents(prev => prev.map((c, j) => j === i ? { ...c, links: [...c.links, { shop: 'Amazon', url: '' }] } : c))
+  async function scanComponents() {
+    if (!componentText.trim()) return
+    setScanning(true)
+    setScanResults([])
+    setScanDone(false)
+    try {
+      const res = await fetch('/api/components', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: componentText }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setScanResults(data.components)
+      setScanDone(true)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Error al analizar')
+    } finally {
+      setScanning(false)
+    }
   }
-  function updateComponentLink(i: number, li: number, field: keyof ShopLink, value: string) {
-    setEditComponents(prev => prev.map((c, j) => j === i ? {
-      ...c, links: c.links.map((l, k) => k === li ? { ...l, [field]: value } : l)
-    } : c))
+
+  function acceptComponent(comp: Component) {
+    const withLinks = { ...comp, links: generateLinks(comp.name), confident: undefined, did_you_mean: undefined, unknown: undefined }
+    setEditComponents(prev => [...prev, withLinks])
+    setScanResults(prev => prev.filter(c => c.name !== comp.name))
   }
-  function removeComponentLink(i: number, li: number) {
-    setEditComponents(prev => prev.map((c, j) => j === i ? { ...c, links: c.links.filter((_, k) => k !== li) } : c))
+
+  function acceptSuggestion(comp: Component) {
+    const name = comp.did_you_mean || comp.name
+    const withLinks = { name, type: comp.type, links: generateLinks(name) }
+    setEditComponents(prev => [...prev, withLinks])
+    setScanResults(prev => prev.filter(c => c.name !== comp.name))
   }
-  function updateComponentName(i: number, name: string) {
-    setEditComponents(prev => prev.map((c, j) => j === i ? { ...c, name } : c))
+
+  function rejectComponent(comp: Component) {
+    setScanResults(prev => prev.filter(c => c.name !== comp.name))
   }
-  function removeComponent(i: number) { setEditComponents(prev => prev.filter((_, j) => j !== i)) }
-  function addComponent() { setEditComponents(prev => [...prev, { name: '', type: 'internal', links: [] }]) }
+
+  function acceptAll() {
+    const accepted = scanResults.map(comp => {
+      const name = comp.did_you_mean || comp.name
+      return { name, type: comp.type, links: generateLinks(name) }
+    })
+    setEditComponents(prev => [...prev, ...accepted])
+    setScanResults([])
+  }
+
+  function removeComponent(i: number) {
+    setEditComponents(prev => prev.filter((_, j) => j !== i))
+  }
 
   async function saveChanges() {
     setSaving(true)
@@ -210,6 +262,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       setEditing(false)
       setNewImageFile(null)
       setNewImagePreview(null)
+      setScanResults([])
+      setScanDone(false)
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Error al guardar')
     } finally {
@@ -306,11 +360,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         <div style={{ background: 'var(--surface)', border: '1px solid var(--accent)', borderRadius: 'var(--radius)', padding: 28, marginBottom: 28 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>✏️ Editando: {setup.title}</h2>
 
+          {/* Título */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Título del Setup</label>
             <input value={editTitle} onChange={e => setEditTitle(e.target.value)} style={inputStyle} />
           </div>
 
+          {/* Foto */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Foto del Setup</label>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleImageFile(e.target.files[0])} />
@@ -326,10 +382,116 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             )}
           </div>
 
+          {/* Campo de texto libre para componentes */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>
+              🖥️ Añadir Componentes
+            </label>
+            <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>
+              Escribe tus componentes como quieras — con comas, espacios o sin separadores. La IA los identificará y clasificará automáticamente.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <textarea
+                value={componentText}
+                onChange={e => setComponentText(e.target.value)}
+                placeholder="Ej: RTX 4090 monitor LG 27 pulgadas keychron q1 logitech g pro ram 32gb..."
+                rows={3}
+                style={{ ...inputStyle, resize: 'vertical', flex: 1 }}
+              />
+              <button
+                onClick={scanComponents}
+                disabled={scanning || !componentText.trim()}
+                className="btn-primary"
+                style={{ fontSize: 13, padding: '0 16px', opacity: scanning || !componentText.trim() ? 0.5 : 1, flexShrink: 0, alignSelf: 'flex-start', marginTop: 0, height: 42 }}
+              >
+                {scanning ? '⏳' : '✦ Analizar'}
+              </button>
+            </div>
+
+            {/* Resultados del análisis */}
+            {scanDone && scanResults.length > 0 && (
+              <div style={{ marginTop: 12, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
+                    ✦ {scanResults.length} componente{scanResults.length !== 1 ? 's' : ''} detectado{scanResults.length !== 1 ? 's' : ''}
+                  </div>
+                  <button onClick={acceptAll} style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', border: 'none', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, cursor: 'pointer', fontFamily: 'var(--font-display)' }}>
+                    ✓ Aceptar todos
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {scanResults.map((comp, i) => (
+                    <div key={i} style={{ background: 'var(--surface)', border: `1px solid ${comp.unknown ? 'rgba(255,77,109,0.3)' : comp.confident === false ? 'rgba(207,250,124,0.3)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: comp.did_you_mean ? 4 : 0 }}>
+                            <span style={{ fontSize: 11, background: comp.type === 'internal' ? 'var(--tag-bg)' : 'var(--surface2)', border: '1px solid var(--border)', color: comp.type === 'internal' ? 'var(--tag-text)' : 'var(--text-muted)', padding: '2px 8px', borderRadius: 50, flexShrink: 0 }}>
+                              {comp.type === 'internal' ? '🔧 Interno' : '🖱️ Periférico'}
+                            </span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: comp.unknown ? '#ff4d6d' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {comp.name}
+                            </span>
+                          </div>
+                          {comp.did_you_mean && (
+                            <div style={{ fontSize: 12, color: 'var(--tag-text)', marginTop: 2 }}>
+                              💡 ¿Te refieres a: <strong>{comp.did_you_mean}</strong>?
+                            </div>
+                          )}
+                          {comp.unknown && (
+                            <div style={{ fontSize: 11, color: '#ff4d6d', marginTop: 2 }}>
+                              ⚠️ No reconocido — se añadirá tal como está
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <button
+                            onClick={() => comp.did_you_mean ? acceptSuggestion(comp) : acceptComponent(comp)}
+                            style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', border: 'none', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => rejectComponent(comp)}
+                            style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {scanDone && scanResults.length === 0 && editComponents.length > 0 && (
+              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--tag-text)' }}>✓ Todos los componentes añadidos</div>
+            )}
+          </div>
+
+          {/* Lista de componentes añadidos */}
+          {editComponents.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>
+                Componentes añadidos ({editComponents.length})
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {editComponents.map((comp, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
+                    <span style={{ fontSize: 11, background: comp.type === 'internal' ? 'var(--tag-bg)' : 'var(--surface3)', border: '1px solid var(--border)', color: comp.type === 'internal' ? 'var(--tag-text)' : 'var(--text-muted)', padding: '2px 8px', borderRadius: 50, flexShrink: 0 }}>
+                      {comp.type === 'internal' ? '🔧' : '🖱️'}
+                    </span>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{comp.name}</span>
+                    <button onClick={() => removeComponent(i)} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Pins en la imagen */}
           {(newImagePreview || setup.image_url) && (
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>📍 Componentes en la imagen</label>
-              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 12 }}>Toca la imagen para marcar cada componente.</p>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>📍 Marcar componentes en la imagen</label>
+              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>Toca la imagen para añadir un pin en cada componente visible.</p>
               <PinEditor
                 imageUrl={newImagePreview || setup.image_url || ''}
                 pins={editPins}
@@ -340,35 +502,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             </div>
           )}
 
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>🔧 Componentes Internos del PC</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {editComponents.map((comp, i) => (
-                <div key={i} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                    <input value={comp.name} onChange={e => updateComponentName(i, e.target.value)} placeholder="Ej: RTX 4090, Ryzen 9 7950X..." style={{ ...inputStyle, flex: 1 }} />
-                    <button onClick={() => removeComponent(i)} style={{ background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', borderRadius: 'var(--radius-sm)', padding: '8px 12px', cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>✕</button>
-                  </div>
-                  {comp.links.map((link, li) => (
-                    <div key={li} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                      <select value={link.shop} onChange={e => updateComponentLink(i, li, 'shop', e.target.value)} style={{ ...inputStyle, width: 'auto', flexShrink: 0 }}>
-                        {SHOPS.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      <input value={link.url} onChange={e => updateComponentLink(i, li, 'url', e.target.value)} placeholder="https://..." style={{ ...inputStyle, flex: 1 }} />
-                      <button onClick={() => removeComponentLink(i, li)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', cursor: 'pointer', flexShrink: 0 }}>✕</button>
-                    </div>
-                  ))}
-                  <button onClick={() => addComponentLink(i)} style={{ background: 'transparent', border: '1px dashed var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '6px 12px', cursor: 'pointer', fontSize: 12, width: '100%', marginTop: 4 }}>
-                    + Añadir link de compra
-                  </button>
-                </div>
-              ))}
-              <button onClick={addComponent} style={{ background: 'var(--tag-bg)', border: '1px dashed var(--tag-border)', color: 'var(--tag-text)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 700, width: '100%', fontFamily: 'var(--font-display)' }}>
-                + Añadir componente interno
-              </button>
-            </div>
-          </div>
-
+          {/* Guardar / Cancelar */}
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={saveChanges} disabled={saving} className="btn-primary" style={{ flex: 1, fontSize: 14, padding: 13, opacity: saving ? 0.6 : 1 }}>
               {saving ? '⏳ Guardando...' : '✓ Guardar cambios'}
@@ -395,7 +529,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             </div>
           )}
 
-          {/* Título y acciones */}
           {setup.image_url && (
             <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
               <div>
@@ -438,17 +571,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         </div>
       )}
 
-      {/* ── Lista de componentes de la imagen ── */}
+      {/* ── Lista de componentes de la imagen (pins) ── */}
       {!editing && setup.pins && setup.pins.filter(p => p.name).length > 0 && (
         <div style={{ marginBottom: 32 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>📍 Componentes del Setup</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {setup.pins.filter(p => p.name).map((pin, i) => {
-              const links = pin.links?.length > 0 ? pin.links : [
-                { shop: 'Amazon', url: makeDefaultLink(pin.name, 'Amazon') },
-                { shop: 'PcComponentes', url: makeDefaultLink(pin.name, 'PcComponentes') },
-                { shop: 'MediaMarkt', url: makeDefaultLink(pin.name, 'MediaMarkt') },
-              ]
+              const links = pin.links?.length > 0 ? pin.links : generateLinks(pin.name)
               return (
                 <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
@@ -472,21 +601,19 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         </div>
       )}
 
-      {/* ── Componentes internos ── */}
+      {/* ── Componentes internos y periféricos ── */}
       {!editing && setup.components && setup.components.length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🔧 Componentes Internos del PC</h2>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🔧 Componentes</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {setup.components.map((comp, i) => {
-              const links = comp.links?.length > 0 ? comp.links : [
-                { shop: 'Amazon', url: makeDefaultLink(comp.name, 'Amazon') },
-                { shop: 'PcComponentes', url: makeDefaultLink(comp.name, 'PcComponentes') },
-                { shop: 'MediaMarkt', url: makeDefaultLink(comp.name, 'MediaMarkt') },
-              ]
+              const links = comp.links?.length > 0 ? comp.links : generateLinks(comp.name)
               return (
                 <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🔧</div>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                      {comp.type === 'internal' ? '🔧' : '🖱️'}
+                    </div>
                     <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{comp.name}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
