@@ -192,7 +192,7 @@ export default function UserProfile({ setups: initialSetups, username }: Props) 
       const updates = {
         title: editTitle,
         components: editComponents.filter(c => c.name.trim()),
-        pins: editPins,
+        pins: editPins.filter(p => p.name.trim()),
         image_url,
       }
       const res = await fetch('/api/setups', {
