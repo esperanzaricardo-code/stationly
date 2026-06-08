@@ -14,6 +14,9 @@ export type Component = {
   name: string
   type: 'peripheral' | 'internal'
   links: ShopLink[]
+  confident?: boolean
+  did_you_mean?: string
+  unknown?: boolean
 }
 
 export type Pin = {
