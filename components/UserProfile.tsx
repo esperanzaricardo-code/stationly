@@ -62,6 +62,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [sessionToken, setSessionToken] = useState('')
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const [likes, setLikes] = useState<Record<string, number>>({})
   const [liked, setLiked] = useState<Record<string, boolean>>({})
@@ -77,7 +78,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [editComponents, setEditComponents] = useState<Component[]>([])
   const [editPins, setEditPins] = useState<Pin[]>([])
 
-  // Nuevo flujo de texto libre
   const [componentText, setComponentText] = useState('')
   const [scanning, setScanning] = useState(false)
   const [scanResults, setScanResults] = useState<Component[]>([])
@@ -157,6 +157,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setComponentText('')
     setScanResults([])
     setScanDone(false)
+    setShowAdvanced(false)
     setEditing(true)
   }
 
@@ -166,6 +167,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setNewImagePreview(null)
     setScanResults([])
     setScanDone(false)
+    setShowAdvanced(false)
   }
 
   function handleImageFile(file: File) {
@@ -366,18 +368,40 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             <input value={editTitle} onChange={e => setEditTitle(e.target.value)} style={inputStyle} />
           </div>
 
-          {/* Foto */}
+          {/* Foto con botón de cambiar como overlay */}
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Foto del Setup</label>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleImageFile(e.target.files[0])} />
-            {newImagePreview ? (
-              <div style={{ position: 'relative', borderRadius: 'var(--radius-sm)', overflow: 'hidden', marginBottom: 8 }}>
-                <img src={newImagePreview} alt="Nueva foto" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' }} />
-                <button onClick={() => { setNewImageFile(null); setNewImagePreview(null) }} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', width: 28, height: 28, borderRadius: '50%', fontSize: 14, cursor: 'pointer' }}>✕</button>
+            {newImagePreview || setup.image_url ? (
+              <div style={{ position: 'relative', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                <img
+                  src={newImagePreview || setup.image_url || ''}
+                  alt="Setup"
+                  style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' }}
+                />
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  style={{
+                    position: 'absolute', top: 10, right: 10,
+                    background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none',
+                    borderRadius: 8, fontSize: 12, padding: '6px 12px',
+                    cursor: 'pointer', backdropFilter: 'blur(4px)',
+                    fontFamily: 'var(--font-display)', fontWeight: 600,
+                  }}
+                >
+                  📸 Cambiar foto
+                </button>
+                {newImagePreview && (
+                  <button
+                    onClick={() => { setNewImageFile(null); setNewImagePreview(null) }}
+                    style={{ position: 'absolute', top: 10, right: 120, background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', width: 28, height: 28, borderRadius: '50%', fontSize: 14, cursor: 'pointer' }}
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             ) : (
-              <button onClick={() => fileRef.current?.click()} style={{ background: 'var(--surface2)', border: '2px dashed var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '20px', cursor: 'pointer', fontSize: 13, width: '100%', textAlign: 'center' }}>
-                📸 Cambiar foto
+              <button onClick={() => fileRef.current?.click()} style={{ background: 'var(--surface2)', border: '2px dashed var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '40px', cursor: 'pointer', fontSize: 13, width: '100%', textAlign: 'center' }}>
+                📸 Subir foto del setup
               </button>
             )}
           </div>
@@ -388,7 +412,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
               🖥️ Añadir Componentes
             </label>
             <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>
-              Escribe tus componentes como quieras — con comas, espacios o sin separadores. La IA los identificará y clasificará automáticamente.
+              Escribe tus componentes como quieras. La IA los identificará y clasificará automáticamente.
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
               <textarea
@@ -402,7 +426,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                 onClick={scanComponents}
                 disabled={scanning || !componentText.trim()}
                 className="btn-primary"
-                style={{ fontSize: 13, padding: '0 16px', opacity: scanning || !componentText.trim() ? 0.5 : 1, flexShrink: 0, alignSelf: 'flex-start', marginTop: 0, height: 42 }}
+                style={{ fontSize: 13, padding: '0 16px', opacity: scanning || !componentText.trim() ? 0.5 : 1, flexShrink: 0, alignSelf: 'flex-start', height: 42 }}
               >
                 {scanning ? '⏳' : '✦ Analizar'}
               </button>
@@ -444,13 +468,11 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                           )}
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                          <button
-                            onClick={() => comp.did_you_mean ? acceptSuggestion(comp) : acceptComponent(comp)}
+                          <button onClick={() => comp.did_you_mean ? acceptSuggestion(comp) : acceptComponent(comp)}
                             style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', border: 'none', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>
                             ✓
                           </button>
-                          <button
-                            onClick={() => rejectComponent(comp)}
+                          <button onClick={() => rejectComponent(comp)}
                             style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>
                             ✕
                           </button>
@@ -476,9 +498,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {editComponents.map((comp, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
-                    <span style={{ fontSize: 11, background: comp.type === 'internal' ? 'var(--tag-bg)' : 'var(--surface3)', border: '1px solid var(--border)', color: comp.type === 'internal' ? 'var(--tag-text)' : 'var(--text-muted)', padding: '2px 8px', borderRadius: 50, flexShrink: 0 }}>
-                      {comp.type === 'internal' ? '🔧' : '🖱️'}
-                    </span>
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>{comp.type === 'internal' ? '🔧' : '🖱️'}</span>
                     <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{comp.name}</span>
                     <button onClick={() => removeComponent(i)} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>✕</button>
                   </div>
@@ -487,20 +507,29 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             </div>
           )}
 
-          {/* Pins en la imagen */}
-          {(newImagePreview || setup.image_url) && (
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>📍 Marcar componentes en la imagen</label>
-              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>Toca la imagen para añadir un pin en cada componente visible.</p>
-              <PinEditor
-                imageUrl={newImagePreview || setup.image_url || ''}
-                pins={editPins}
-                isOwner={isOwner}
-                editing={true}
-                onChange={setEditPins}
-              />
-            </div>
-          )}
+          {/* Opciones avanzadas — Pins */}
+          <div style={{ marginBottom: 24 }}>
+            <button
+              onClick={() => setShowAdvanced(v => !v)}
+              style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', cursor: 'pointer', fontSize: 13, width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+            >
+              <span>📍 Marcar componentes en la imagen <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>(opcional)</span></span>
+              <span>{showAdvanced ? '▲' : '▼'}</span>
+            </button>
+
+            {showAdvanced && (newImagePreview || setup.image_url) && (
+              <div style={{ marginTop: 12 }}>
+                <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>Toca la imagen para añadir un pin en cada componente visible.</p>
+                <PinEditor
+                  imageUrl={newImagePreview || setup.image_url || ''}
+                  pins={editPins}
+                  isOwner={isOwner}
+                  editing={true}
+                  onChange={setEditPins}
+                />
+              </div>
+            )}
+          </div>
 
           {/* Guardar / Cancelar */}
           <div style={{ display: 'flex', gap: 10 }}>
@@ -601,7 +630,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         </div>
       )}
 
-      {/* ── Componentes internos y periféricos ── */}
+      {/* ── Componentes ── */}
       {!editing && setup.components && setup.components.length > 0 && (
         <div style={{ marginBottom: 32 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🔧 Componentes</h2>
