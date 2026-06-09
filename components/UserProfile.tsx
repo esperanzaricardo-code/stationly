@@ -289,6 +289,10 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     root.style.setProperty('--setup-accent', c.accent)
     root.style.setProperty('--setup-accent2', c.accent2)
     root.style.setProperty('--setup-accent-glow', c.glow)
+    root.style.setProperty('--accent', c.accent)
+    root.style.setProperty('--accent2', c.accent2)
+    root.style.setProperty('--accent-glow', c.glow)
+    root.style.setProperty('--tag-text', c.accent)
   }
 
   async function saveProfile() {
