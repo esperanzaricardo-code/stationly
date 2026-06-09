@@ -835,8 +835,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             {showAdvanced && (newImagePreview || setup.image_url) && (
               <div style={{ marginTop: 12 }}>
                 <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>Toca la imagen para añadir un pin en cada componente visible.</p>
-                <PinEditor imageUrl={newImagePreview || setup.image_url || ''} pins={editPins} isOwner={isOwner} editing={true} onChange={setEditPins} />
-              </div>
+<PinEditor imageUrl={newImagePreview || setup.image_url || ''} pins={editPins} isOwner={isOwner} editing={true} components={editComponents} onChange={setEditPins} />              </div>
             )}
           </div>
 
