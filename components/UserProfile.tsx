@@ -73,10 +73,11 @@ function CategoryPill({ type, category }: { type: string; category?: string }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center',
       fontSize: 11, fontWeight: 600,
-      background: 'rgba(var(--setup-accent-rgb, 207,250,124),0.12)',
-      border: '1px solid rgba(var(--setup-accent-rgb, 207,250,124),0.25)',
+      background: 'var(--setup-accent-glow)',
+      border: '1px solid var(--setup-accent)',
       color: 'var(--setup-accent)',
       padding: '2px 8px', borderRadius: 50, flexShrink: 0, whiteSpace: 'nowrap',
+      opacity: 0.9,
     }}>
       {label}
     </span>
