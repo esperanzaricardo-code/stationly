@@ -11,15 +11,6 @@ const AVATAR_GRADIENTS = [
   ['#60a5fa','#3b82f6'], ['#f472b6','#ec4899'],
 ]
 
-const CATEGORY_ICONS: Record<string, string> = {
-  'CPU': '⚙️', 'GPU': '🎮', 'RAM': '💾', 'Placa base': '🔌',
-  'Almacenamiento': '💿', 'Fuente de alimentación': '⚡', 'Refrigeración': '❄️',
-  'Caja': '🖥️', 'Monitor': '🖥️', 'Teclado': '⌨️', 'Ratón': '🖱️',
-  'Auriculares': '🎧', 'Micrófono': '🎙️', 'Webcam': '📷', 'Altavoces': '🔊',
-  'Silla': '🪑', 'Escritorio': '🗄️', 'Iluminación': '💡', 'Capturadora': '📡',
-  'Interfaz de audio': '🎚️', 'Stream Deck': '🎛️', 'Otro': '📦',
-}
-
 function hashStr(str: string) {
   let h = 0
   for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0
@@ -60,19 +51,17 @@ function totalComponents(setups: Setup[]) {
 }
 
 function CategoryPill({ type, category }: { type: string; category?: string }) {
-  const icon = category ? (CATEGORY_ICONS[category] || '📦') : (type === 'internal' ? '🔧' : '🖱️')
   const label = category || (type === 'internal' ? 'Interno' : 'Periférico')
-  const isInternal = type === 'internal'
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
+      display: 'inline-flex', alignItems: 'center',
       fontSize: 11, fontWeight: 600,
-      background: isInternal ? 'rgba(207,250,124,0.12)' : 'rgba(255,255,255,0.05)',
-      border: `1px solid ${isInternal ? 'rgba(207,250,124,0.25)' : 'rgba(255,255,255,0.08)'}`,
-      color: isInternal ? '#b8e86a' : '#7a7a8c',
+      background: 'rgba(207,250,124,0.12)',
+      border: '1px solid rgba(207,250,124,0.25)',
+      color: '#b8e86a',
       padding: '2px 8px', borderRadius: 50, flexShrink: 0, whiteSpace: 'nowrap',
     }}>
-      <span style={{ fontSize: 10 }}>{icon}</span> {label}
+      {label}
     </span>
   )
 }
