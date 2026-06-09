@@ -48,8 +48,8 @@ function applyAppColor(color: AccentColor) {
   root.style.setProperty('--accent-glow', c.glow)
   root.style.setProperty('--tag-bg', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.1)`)
   root.style.setProperty('--tag-border', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.3)`)
+  root.style.setProperty('--tag-text', c.accent)
 }
-
 export default function Nav({ setupCount, totalLikes }: { setupCount?: number; totalLikes?: number }) {
   const { theme, toggle } = useTheme()
   const router = useRouter()
