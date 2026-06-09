@@ -157,9 +157,9 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
             </button>
           )}
 
-          {/* Botón ajustes — solo registrados */}
-          {loggedIn && (
-            <div style={{ position: 'relative' }}>
+         {/* Botón ajustes — solo registrados */}
+        {loggedIn && (
+          <div style={{ position: 'relative' }} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setSettingsOpen(false) }} tabIndex={-1}>
               <button onClick={() => setSettingsOpen(o => !o)} title="Ajustes de apariencia" style={{
                 background: settingsOpen ? 'var(--surface3)' : 'var(--surface2)',
                 border: '1px solid var(--border)',
