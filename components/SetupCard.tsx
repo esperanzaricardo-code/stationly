@@ -39,16 +39,6 @@ function PlaceholderImg({ user }: { user: string }) {
   )
 }
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return 'ahora mismo'
-  if (m < 60) return `hace ${m}m`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `hace ${h}h`
-  return `hace ${Math.floor(h / 24)}d`
-}
-
 export default function SetupCard({ setup }: { setup: Setup }) {
   const router = useRouter()
   const [likes, setLikes] = useState(setup.likes || 0)
@@ -189,7 +179,7 @@ export default function SetupCard({ setup }: { setup: Setup }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
             <div style={{
               width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-              background: getAvatarGradient(setup.user_name),
+              background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
               fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#0a0a0b',
