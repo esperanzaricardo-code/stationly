@@ -176,9 +176,11 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [saving, setSaving] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  const [profileTag, setProfileTag] = useState<string | null>(null)
-  const [editTag, setEditTag] = useState<string>('')
-  const [savingTag, setSavingTag] = useState(false)
+const [profileTag, setProfileTag] = useState<string | null>(null)
+const [roleTag, setRoleTag] = useState<string | null>(null)
+const [editTag, setEditTag] = useState<string>('')
+const [editRoleTag, setEditRoleTag] = useState<string>('')
+const [savingTag, setSavingTag] = useState(false)
 
   const [likes, setLikes] = useState<Record<string, number>>({})
   const [liked, setLiked] = useState<Record<string, boolean>>({})
@@ -228,10 +230,11 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setLikes(initialLikes)
 
     // Cargar tag del perfil
-    supabase.from('profiles').select('tag').eq('username', username).single()
-      .then(({ data }) => {
-        if (data?.tag) setProfileTag(data.tag)
-      })
+    supabase.from('profiles').select('tag, role_tag').eq('username', username).single()
+  .then(({ data }) => {
+    if (data?.tag) setProfileTag(data.tag)
+    if (data?.role_tag) setRoleTag(data.role_tag)
+  })
 
     const onNewSetup = (e: Event) => {
       const setup = (e as CustomEvent).detail
@@ -245,8 +248,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     if (!editTag) return
     setSavingTag(true)
     try {
-      await supabase.from('profiles').upsert({ username, tag: editTag }, { onConflict: 'username' })
-      setProfileTag(editTag)
+      await supabase.from('profiles').upsert({ username, tag: profileTag ?? null, role_tag: editRoleTag || null }, { onConflict: 'username' })
+setRoleTag(editRoleTag)
     } catch {}
     setSavingTag(false)
   }
@@ -299,6 +302,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setScanDone(false)
     setShowAdvanced(false)
     setEditTag(profileTag || '')
+setEditRoleTag(roleTag || '')
     setEditing(true)
   }
 
@@ -536,6 +540,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', margin: 0 }}>{username}</h1>
             {profileTag && <ProfileTag tag={profileTag} />}
+{roleTag && <ProfileTag tag={roleTag} />}
           </div>
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
             {[
@@ -592,21 +597,21 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             ) : (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {TAGS.map(t => (
-                  <button key={t} onClick={() => setEditTag(t)} style={{
-                    padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                    background: editTag === t ? TAG_STYLES[t].bg : 'var(--surface2)',
-                    border: `1px solid ${editTag === t ? TAG_STYLES[t].border : 'var(--border)'}`,
-                    color: editTag === t ? TAG_STYLES[t].color : 'var(--text-muted)',
-                    transition: 'all 0.18s',
-                  }}>
-                    {t}
-                  </button>
-                ))}
-                {editTag && (
-                  <button onClick={() => setEditTag('')} style={{ padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>
-                    Sin tag
-                  </button>
-                )}
+  <button key={t} onClick={() => setEditRoleTag(t)} style={{
+    padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+    background: editRoleTag === t ? TAG_STYLES[t].bg : 'var(--surface2)',
+    border: `1px solid ${editRoleTag === t ? TAG_STYLES[t].border : 'var(--border)'}`,
+    color: editRoleTag === t ? TAG_STYLES[t].color : 'var(--text-muted)',
+    transition: 'all 0.18s',
+  }}>
+    {t}
+  </button>
+))}
+{editRoleTag && (
+  <button onClick={() => setEditRoleTag('')} style={{ padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>
+    Sin tag
+  </button>
+)}
               </div>
             )}
           </div>
