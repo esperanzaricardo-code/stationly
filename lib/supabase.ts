@@ -39,4 +39,18 @@ export type Setup = {
   image_url: string | null
   likes: number
   created_at: string
+  accent_color: string | null
 }
+
+export type AccentColor = 'lime' | 'blue' | 'purple' | 'pink' | 'orange' | 'red' | 'cyan' | 'yellow'
+
+export const ACCENT_COLORS: { id: AccentColor; label: string; from: string; to: string }[] = [
+  { id: 'lime',   label: 'Verde',   from: '#CFFA7C', to: '#9CE89D' },
+  { id: 'blue',   label: 'Azul',    from: '#60a5fa', to: '#818cf8' },
+  { id: 'purple', label: 'Morado',  from: '#c084fc', to: '#a855f7' },
+  { id: 'pink',   label: 'Rosa',    from: '#f472b6', to: '#fb7185' },
+  { id: 'orange', label: 'Naranja', from: '#fb923c', to: '#fbbf24' },
+  { id: 'red',    label: 'Rojo',    from: '#f87171', to: '#ef4444' },
+  { id: 'cyan',   label: 'Cian',    from: '#22d3ee', to: '#38bdf8' },
+  { id: 'yellow', label: 'Amarillo',from: '#fde047', to: '#facc15' },
+]
