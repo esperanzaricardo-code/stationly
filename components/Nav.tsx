@@ -135,8 +135,20 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
         {/* Desktop */}
         <div className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
 
-          {/* Botón ajustes */}
-          <div style={{ position: 'relative' }}>
+          {/* Toggle tema — solo no registrados */}
+{!loggedIn && (
+  <button onClick={toggle} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} style={{
+    background: 'var(--surface2)', border: '1px solid var(--border)',
+    color: 'var(--text-muted)', width: 38, height: 38, borderRadius: '50%',
+    fontSize: 16, cursor: 'pointer', display: 'flex',
+    alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+  }}>
+    {theme === 'dark' ? '☀️' : '🌙'}
+  </button>
+)}
+
+{/* Botón ajustes — solo registrados */}
+{loggedIn && <div style={{ position: 'relative' }}>
             <button onClick={() => setSettingsOpen(o => !o)} title="Ajustes de apariencia" style={{
               background: settingsOpen ? 'var(--surface3)' : 'var(--surface2)',
               border: '1px solid var(--border)',
@@ -197,9 +209,8 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
                     </p>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>}
 
           {loggedIn ? (
             <>
@@ -329,7 +340,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
               <button onClick={handleUpload} className="btn-primary" style={{ fontSize: 14, padding: '12px', width: '100%' }}>
                 📸 Subir Setup
               </button>
-              <button onClick={() => { setMenuOpen(false); supabase.auth.signOut().then(() => router.push('/')) }} className="btn-secondary" style={{ fontSize: 14, padding: '12px', width: '100%' }}>
+              <button onClick={() => { setMenuOpen(false); supabase.auth.signOut().then(() => { setStoredAppColor('lime'); applyAppColor('lime'); setAppColor('lime'); router.push('/') }) }} className="btn-secondary" style={{ fontSize: 14, padding: '12px', width: '100%' }}>
                 Salir
               </button>
             </>
