@@ -54,7 +54,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
   useEffect(() => {
     const stored = getStoredAppColor()
     setAppColor(stored)
-    if (!isProfilePage) applyAppColor(stored)
+    applyAppColor(stored)
   }, [isProfilePage])
 
   useEffect(() => {
