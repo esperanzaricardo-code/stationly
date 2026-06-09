@@ -424,9 +424,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
 
   function startEditing() {
     const draft = loadDraft(setup.id)
-    const useDraft = draft && window.confirm('📝 Tienes un borrador sin guardar de este setup. ¿Quieres recuperarlo?')
 
-    if (useDraft && draft) {
+    if (draft) {
       setEditTitle(draft.title)
       setEditComponents(draft.components || [])
       setEditPins(draft.pins || [])
@@ -436,7 +435,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       setScanDone(draft.scanDone || false)
       setDraftRestored(true)
     } else {
-      if (draft) clearDraft(setup.id)
       setEditTitle(setup.title)
       setEditComponents(setup.components ? setup.components.map(c => ({ ...c, links: c.links || [] })) : [])
       setEditPins(setup.pins || [])
@@ -452,6 +450,19 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setShowCropper(false)
     setShowAdvanced(false)
     setEditing(true)
+  }
+
+  function discardDraft() {
+    clearDraft(setup.id)
+    setEditTitle(setup.title)
+    setEditComponents(setup.components ? setup.components.map(c => ({ ...c, links: c.links || [] })) : [])
+    setEditPins(setup.pins || [])
+    setComponentText('')
+    setScanResults([])
+    setScanDone(false)
+    setEditAccentColor((setup.accent_color || 'lime') as AccentColor)
+    setEditingIndex(null)
+    setDraftRestored(false)
   }
 
   function cancelEditing() {
@@ -770,10 +781,16 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       {editing && isOwner && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--setup-accent)', borderRadius: 'var(--radius)', padding: 28, marginBottom: 28 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>✏️ Editando: {setup.title}</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
               💾 Borrador guardado automáticamente{draftRestored ? ' · Borrador recuperado' : ''}
             </span>
+            {draftRestored && (
+              <button onClick={discardDraft}
+                style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 50, cursor: 'pointer' }}>
+                ↺ Descartar y empezar de cero
+              </button>
+            )}
           </div>
 
           {/* Color del setup */}
