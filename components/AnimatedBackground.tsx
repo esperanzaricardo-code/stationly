@@ -11,6 +11,23 @@ type Shape = {
   opacity: number
 }
 
+function getSetupAccentRGB(): string {
+  const el = document.querySelector('[data-setup-color]')
+  if (!el) return null as unknown as string
+  const color = el.getAttribute('data-setup-color')
+  const map: Record<string, string> = {
+    'lime':   '207,250,124',
+    'blue':   '96,165,250',
+    'purple': '192,132,252',
+    'pink':   '244,114,182',
+    'orange': '251,146,60',
+    'red':    '248,113,113',
+    'cyan':   '34,211,238',
+    'yellow': '253,224,71',
+  }
+  return map[color || 'lime'] || '207,250,124'
+}
+
 export default function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { theme } = useTheme()
@@ -20,7 +37,6 @@ export default function AnimatedBackground() {
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-
     let animId: number
     let shapes: Shape[] = []
 
@@ -53,7 +69,6 @@ export default function AnimatedBackground() {
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
       ctx.beginPath()
-
       if (s.type === 'triangle') {
         const h = s.size * 0.866
         ctx.moveTo(0, -h * 0.667)
@@ -69,7 +84,6 @@ export default function AnimatedBackground() {
         ctx.lineTo(-s.size / 2, 0)
         ctx.closePath()
       }
-
       ctx.stroke()
       ctx.restore()
     }
@@ -77,29 +91,26 @@ export default function AnimatedBackground() {
     function draw() {
       if (!canvas || !ctx) return
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      const color = theme === 'dark' ? '255,255,255' : '0,0,0'
-
+      const accentRGB = getSetupAccentRGB()
+      const defaultColor = theme === 'dark' ? '255,255,255' : '0,0,0'
+      const color = accentRGB || defaultColor
       shapes.forEach(s => {
         s.x += s.speedX
         s.y += s.speedY
         s.rotation += s.speedR
-
         if (s.x < -s.size * 2) s.x = canvas.width + s.size
         if (s.x > canvas.width + s.size * 2) s.x = -s.size
         if (s.y < -s.size * 2) s.y = canvas.height + s.size
         if (s.y > canvas.height + s.size * 2) s.y = -s.size
-
         ctx.strokeStyle = `rgba(${color},${s.opacity})`
         drawShape(ctx, s)
       })
-
       animId = requestAnimationFrame(draw)
     }
 
     resize()
     shapes = Array.from({ length: 30 }, randomShape)
     draw()
-
     window.addEventListener('resize', resize)
     return () => {
       cancelAnimationFrame(animId)
