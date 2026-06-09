@@ -85,13 +85,15 @@ function CategoryPill({ type, category }: { type: string; category?: string }) {
 }
 
 function ProfileTag({ tag }: { tag: string }) {
-  const style = TAG_STYLES[tag] || TAG_STYLES['Gamer']
   const isFounder = tag === 'Founder'
+  const style = TAG_STYLES[tag] || TAG_STYLES['Gamer']
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
       fontSize: 11, fontWeight: 700,
-      background: style.bg, border: `1px solid ${style.border}`, color: style.color,
+      background: isFounder ? style.bg : 'var(--setup-accent-glow)',
+      border: `1px solid ${isFounder ? style.border : 'var(--setup-accent)'}`,
+      color: isFounder ? style.color : 'var(--setup-accent)',
       padding: '2px 10px', borderRadius: 50, whiteSpace: 'nowrap',
       boxShadow: isFounder ? `0 0 8px ${style.border}` : 'none',
       letterSpacing: '0.3px',
