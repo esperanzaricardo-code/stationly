@@ -13,19 +13,32 @@ type Shape = {
 
 function getSetupAccentRGB(): string {
   const el = document.querySelector('[data-setup-color]')
-  if (!el) return null as unknown as string
-  const color = el.getAttribute('data-setup-color')
-  const map: Record<string, string> = {
-    'lime':   '207,250,124',
-    'blue':   '96,165,250',
-    'purple': '192,132,252',
-    'pink':   '244,114,182',
-    'orange': '251,146,60',
-    'red':    '248,113,113',
-    'cyan':   '34,211,238',
-    'yellow': '253,224,71',
+  if (el) {
+    const color = el.getAttribute('data-setup-color')
+    const map: Record<string, string> = {
+      'lime':   '207,250,124',
+      'blue':   '96,165,250',
+      'purple': '192,132,252',
+      'pink':   '244,114,182',
+      'orange': '251,146,60',
+      'red':    '248,113,113',
+      'cyan':   '34,211,238',
+      'yellow': '253,224,71',
+    }
+    return map[color || 'lime'] || '207,250,124'
   }
-  return map[color || 'lime'] || '207,250,124'
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()
+  const map: Record<string, string> = {
+    '#CFFA7C': '207,250,124',
+    '#60a5fa': '96,165,250',
+    '#c084fc': '192,132,252',
+    '#f472b6': '244,114,182',
+    '#fb923c': '251,146,60',
+    '#f87171': '248,113,113',
+    '#22d3ee': '34,211,238',
+    '#fde047': '253,224,71',
+  }
+  return map[accent] || '207,250,124'
 }
 
 export default function AnimatedBackground() {
