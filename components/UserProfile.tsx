@@ -30,11 +30,6 @@ function hashStr(str: string) {
   return Math.abs(h)
 }
 
-function getAvatarGradient(user: string) {
-  const [a, b] = AVATAR_GRADIENTS[hashStr(user) % AVATAR_GRADIENTS.length]
-  return `linear-gradient(135deg, ${a}, ${b})`
-}
-
 function makeDefaultLink(component: string, shop: string, affiliateId?: string) {
   const query = component.trim().replace(/\s+/g, '+')
   if (shop === 'Amazon') {
@@ -522,6 +517,28 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setEditingName('')
   }
 
+  async function deleteSetup() {
+    if (!window.confirm('¿Seguro que quieres eliminar este setup? Esta acción no se puede deshacer.')) return
+    setSaving(true)
+    try {
+      const res = await fetch('/api/setups', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupId: setup.id, sessionToken }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const newSetups = setups.filter(s => s.id !== setup.id)
+      setSetups(newSetups)
+      setActiveSetup(0)
+      setEditing(false)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Error al eliminar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function saveChanges() {
     if (scanResults.length > 0) {
       const confirm = window.confirm(`Tienes ${scanResults.length} componente${scanResults.length !== 1 ? 's' : ''} detectado${scanResults.length !== 1 ? 's' : ''} sin confirmar. ¿Quieres añadirlos todos antes de guardar?`)
@@ -590,7 +607,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     return (
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 36 }}>
-          <div style={{ width: 72, height: 72, borderRadius: '50%', flexShrink: 0, background: getAvatarGradient(username), fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0b', border: '3px solid var(--accent)', boxShadow: '0 0 20px var(--accent-glow)' }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0b', border: '3px solid var(--setup-accent)', boxShadow: '0 0 20px var(--setup-accent-glow)' }}>
             {username.slice(0, 2).toUpperCase()}
           </div>
           <div>
@@ -620,7 +637,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     >
       {/* ── Profile header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 36, flexWrap: 'wrap' }}>
-<div style={{ width: 72, height: 72, borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0b', border: '3px solid var(--setup-accent)', boxShadow: '0 0 20px var(--setup-accent-glow)' }}>          {username.slice(0, 2).toUpperCase()}
+        <div style={{ width: 72, height: 72, borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0b', border: '3px solid var(--setup-accent)', boxShadow: '0 0 20px var(--setup-accent-glow)' }}>
+          {username.slice(0, 2).toUpperCase()}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
@@ -891,12 +909,15 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             )}
           </div>
 
-          {/* Guardar / Cancelar */}
-          <div style={{ display: 'flex', gap: 10 }}>
+          {/* Guardar / Cancelar / Eliminar */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button onClick={saveChanges} disabled={saving} className="btn-primary" style={{ flex: 1, fontSize: 14, padding: 13, opacity: saving ? 0.6 : 1 }}>
               {saving ? '⏳ Guardando...' : '✓ Guardar cambios'}
             </button>
             <button onClick={cancelEditing} className="btn-secondary" style={{ fontSize: 14, padding: '13px 20px' }}>Cancelar</button>
+            <button onClick={deleteSetup} disabled={saving} style={{ fontSize: 14, padding: '13px 20px', background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', borderRadius: 50, cursor: 'pointer', fontFamily: 'var(--font-body)', opacity: saving ? 0.6 : 1 }}>
+              🗑 Eliminar
+            </button>
           </div>
         </div>
       )}
