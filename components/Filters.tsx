@@ -31,13 +31,13 @@ export default function Filters() {
           onClick={() => handleFilter(f.key)}
           style={{
             flexShrink: 0,
-            background: active === f.key ? 'linear-gradient(135deg, #CFFA7C, #9CE89D)' : 'var(--surface2)',
-            border: `1px solid ${active === f.key ? 'transparent' : 'var(--border)'}`,
-            color: active === f.key ? '#0a0a0b' : 'var(--text-muted)',
+            background: active === f.key ? 'linear-gradient(135deg, var(--accent), var(--accent2))' : 'var(--surface2)',
+border: `1px solid ${active === f.key ? 'transparent' : 'var(--border)'}`,
+color: active === f.key ? 'var(--accent-fg, #0a0a0b)' : 'var(--text-muted)',
             fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: active === f.key ? 700 : 500,
             padding: '7px 16px', borderRadius: 50, cursor: 'pointer',
             transition: 'all 0.18s', whiteSpace: 'nowrap',
-            boxShadow: active === f.key ? '0 2px 12px rgba(207,250,124,0.3)' : 'none',
+            boxShadow: active === f.key ? `0 2px 12px var(--accent-glow)` : 'none',
           }}
         >
           {f.label}
