@@ -21,6 +21,8 @@ const TAG_STYLES: Record<string, { bg: string; border: string; color: string }> 
   'Content Creator': { bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.3)',  color: '#fb923c' },
 }
 
+const STATIONLY_AFFILIATE_ID = process.env.NEXT_PUBLIC_AMAZON_AFFILIATE_ID || 'stationly-21'
+
 function hashStr(str: string) {
   let h = 0
   for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0
@@ -32,20 +34,24 @@ function getAvatarGradient(user: string) {
   return `linear-gradient(135deg, ${a}, ${b})`
 }
 
-function makeDefaultLink(component: string, shop: string) {
+function makeDefaultLink(component: string, shop: string, affiliateId?: string) {
   const query = component.trim().replace(/\s+/g, '+')
-  if (shop === 'Amazon') return `https://www.amazon.es/s?k=${query}`
+  if (shop === 'Amazon') {
+    const tag = affiliateId || STATIONLY_AFFILIATE_ID
+    return `https://www.amazon.es/s?k=${query}&tag=${tag}`
+  }
   if (shop === 'PcComponentes') return `https://www.pccomponentes.com/buscar/?query=${query}`
-  if (shop === 'MediaMarkt') return `https://www.mediamarkt.es/es/search.html?query=${query}`
   return ''
 }
 
-function generateLinks(name: string): ShopLink[] {
-  return [
-    { shop: 'Amazon', url: makeDefaultLink(name, 'Amazon') },
-    { shop: 'PcComponentes', url: makeDefaultLink(name, 'PcComponentes') },
-    { shop: 'MediaMarkt', url: makeDefaultLink(name, 'MediaMarkt') },
+function generateLinks(name: string, showPcComponentes: boolean, affiliateId?: string): ShopLink[] {
+  const links: ShopLink[] = [
+    { shop: 'Amazon', url: makeDefaultLink(name, 'Amazon', affiliateId) },
   ]
+  if (showPcComponentes) {
+    links.push({ shop: 'PcComponentes', url: makeDefaultLink(name, 'PcComponentes') })
+  }
+  return links
 }
 
 function totalLikes(setups: Setup[]) {
@@ -95,7 +101,12 @@ function ProfileTag({ tag }: { tag: string }) {
   )
 }
 
-function ComponentTabs({ peripherals, internals }: { peripherals: Component[]; internals: Component[] }) {
+function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId }: {
+  peripherals: Component[]
+  internals: Component[]
+  showPcComponentes: boolean
+  affiliateId?: string
+}) {
   const [activeTab, setActiveTab] = useState<'peripherals' | 'internals'>(
     peripherals.length > 0 ? 'peripherals' : 'internals'
   )
@@ -138,7 +149,9 @@ function ComponentTabs({ peripherals, internals }: { peripherals: Component[]; i
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {items.map((comp, i) => {
-          const links = comp.links?.length > 0 ? comp.links : generateLinks(comp.name)
+          const links = comp.links?.length > 0
+            ? comp.links.filter(l => l.shop !== 'MediaMarkt' && (showPcComponentes || l.shop !== 'PcComponentes'))
+            : generateLinks(comp.name, showPcComponentes, affiliateId)
           return (
             <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -176,11 +189,16 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [saving, setSaving] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-const [profileTag, setProfileTag] = useState<string | null>(null)
-const [roleTag, setRoleTag] = useState<string | null>(null)
-const [editTag, setEditTag] = useState<string>('')
-const [editRoleTag, setEditRoleTag] = useState<string>('')
-const [savingTag, setSavingTag] = useState(false)
+  const [profileTag, setProfileTag] = useState<string | null>(null)
+  const [roleTag, setRoleTag] = useState<string | null>(null)
+  const [editTag, setEditTag] = useState<string>('')
+  const [editRoleTag, setEditRoleTag] = useState<string>('')
+  const [savingTag, setSavingTag] = useState(false)
+
+  const [amazonAffiliateId, setAmazonAffiliateId] = useState<string>('')
+  const [editAmazonAffiliateId, setEditAmazonAffiliateId] = useState<string>('')
+  const [showPcComponentes, setShowPcComponentes] = useState(true)
+  const [editShowPcComponentes, setEditShowPcComponentes] = useState(true)
 
   const [likes, setLikes] = useState<Record<string, number>>({})
   const [liked, setLiked] = useState<Record<string, boolean>>({})
@@ -229,12 +247,13 @@ const [savingTag, setSavingTag] = useState(false)
     initialSetups.forEach(s => { initialLikes[s.id] = s.likes || 0 })
     setLikes(initialLikes)
 
-    // Cargar tag del perfil
-    supabase.from('profiles').select('tag, role_tag').eq('username', username).single()
-  .then(({ data }) => {
-    if (data?.tag) setProfileTag(data.tag)
-    if (data?.role_tag) setRoleTag(data.role_tag)
-  })
+    supabase.from('profiles').select('tag, role_tag, amazon_affiliate_id, show_pccomponentes').eq('username', username).single()
+      .then(({ data }) => {
+        if (data?.tag) setProfileTag(data.tag)
+        if (data?.role_tag) setRoleTag(data.role_tag)
+        if (data?.amazon_affiliate_id) setAmazonAffiliateId(data.amazon_affiliate_id)
+        if (data?.show_pccomponentes !== undefined) setShowPcComponentes(data.show_pccomponentes)
+      })
 
     const onNewSetup = (e: Event) => {
       const setup = (e as CustomEvent).detail
@@ -244,12 +263,19 @@ const [savingTag, setSavingTag] = useState(false)
     return () => document.removeEventListener('stationly:new-setup', onNewSetup)
   }, [username, initialSetups])
 
-  async function saveTag() {
-    if (!editTag) return
+  async function saveProfile() {
     setSavingTag(true)
     try {
-      await supabase.from('profiles').upsert({ username, tag: profileTag ?? null, role_tag: editRoleTag || null }, { onConflict: 'username' })
-setRoleTag(editRoleTag)
+      await supabase.from('profiles').upsert({
+        username,
+        tag: profileTag ?? null,
+        role_tag: editRoleTag || null,
+        amazon_affiliate_id: editAmazonAffiliateId || null,
+        show_pccomponentes: editShowPcComponentes,
+      }, { onConflict: 'username' })
+      setRoleTag(editRoleTag)
+      setAmazonAffiliateId(editAmazonAffiliateId)
+      setShowPcComponentes(editShowPcComponentes)
     } catch {}
     setSavingTag(false)
   }
@@ -302,7 +328,9 @@ setRoleTag(editRoleTag)
     setScanDone(false)
     setShowAdvanced(false)
     setEditTag(profileTag || '')
-setEditRoleTag(roleTag || '')
+    setEditRoleTag(roleTag || '')
+    setEditAmazonAffiliateId(amazonAffiliateId || '')
+    setEditShowPcComponentes(showPcComponentes)
     setEditing(true)
   }
 
@@ -392,14 +420,14 @@ setEditRoleTag(roleTag || '')
   }
 
   function acceptComponent(comp: Component) {
-    const withLinks = { ...comp, links: generateLinks(comp.name), confident: undefined, did_you_mean: undefined, unknown: undefined }
+    const withLinks = { ...comp, links: generateLinks(comp.name, showPcComponentes, amazonAffiliateId), confident: undefined, did_you_mean: undefined, unknown: undefined }
     setEditComponents(prev => [...prev, withLinks])
     setScanResults(prev => prev.filter(c => c.name !== comp.name))
   }
 
   function acceptSuggestion(comp: Component) {
     const name = comp.did_you_mean || comp.name
-    const withLinks = { name, type: comp.type, category: comp.category, links: generateLinks(name) }
+    const withLinks = { name, type: comp.type, category: comp.category, links: generateLinks(name, showPcComponentes, amazonAffiliateId) }
     setEditComponents(prev => [...prev, withLinks])
     setScanResults(prev => prev.filter(c => c.name !== comp.name))
   }
@@ -411,7 +439,7 @@ setEditRoleTag(roleTag || '')
   function acceptAll() {
     const accepted = scanResults.map(comp => {
       const name = comp.did_you_mean || comp.name
-      return { name, type: comp.type, category: comp.category, links: generateLinks(name) }
+      return { name, type: comp.type, category: comp.category, links: generateLinks(name, showPcComponentes, amazonAffiliateId) }
     })
     setEditComponents(prev => [...prev, ...accepted])
     setScanResults([])
@@ -432,7 +460,7 @@ setEditRoleTag(roleTag || '')
 
   function confirmEditingComponent() {
     if (editingIndex === null) return
-    setEditComponents(prev => prev.map((c, i) => i === editingIndex ? { ...c, name: editingName, links: generateLinks(editingName) } : c))
+    setEditComponents(prev => prev.map((c, i) => i === editingIndex ? { ...c, name: editingName, links: generateLinks(editingName, showPcComponentes, amazonAffiliateId) } : c))
     setEditingIndex(null)
     setEditingName('')
   }
@@ -444,8 +472,7 @@ setEditRoleTag(roleTag || '')
     }
     setSaving(true)
     try {
-      // Guardar tag si cambió
-      if (editTag && editTag !== profileTag) await saveTag()
+      await saveProfile()
 
       let image_url = setup.image_url
       if (newImageFile && newImagePreview) {
@@ -540,7 +567,7 @@ setEditRoleTag(roleTag || '')
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', margin: 0 }}>{username}</h1>
             {profileTag && <ProfileTag tag={profileTag} />}
-{roleTag && <ProfileTag tag={roleTag} />}
+            {roleTag && <ProfileTag tag={roleTag} />}
           </div>
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
             {[
@@ -590,30 +617,72 @@ setEditRoleTag(roleTag || '')
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Tu tag</label>
             {profileTag === 'Founder' ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                 <ProfileTag tag="Founder" />
                 <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>El tag Founder no se puede cambiar</span>
               </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {TAGS.map(t => (
-  <button key={t} onClick={() => setEditRoleTag(t)} style={{
-    padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-    background: editRoleTag === t ? TAG_STYLES[t].bg : 'var(--surface2)',
-    border: `1px solid ${editRoleTag === t ? TAG_STYLES[t].border : 'var(--border)'}`,
-    color: editRoleTag === t ? TAG_STYLES[t].color : 'var(--text-muted)',
-    transition: 'all 0.18s',
-  }}>
-    {t}
-  </button>
-))}
-{editRoleTag && (
-  <button onClick={() => setEditRoleTag('')} style={{ padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>
-    Sin tag
-  </button>
-)}
+            ) : null}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {TAGS.map(t => (
+                <button key={t} onClick={() => setEditRoleTag(t)} style={{
+                  padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                  background: editRoleTag === t ? TAG_STYLES[t].bg : 'var(--surface2)',
+                  border: `1px solid ${editRoleTag === t ? TAG_STYLES[t].border : 'var(--border)'}`,
+                  color: editRoleTag === t ? TAG_STYLES[t].color : 'var(--text-muted)',
+                  transition: 'all 0.18s',
+                }}>
+                  {t}
+                </button>
+              ))}
+              {editRoleTag && (
+                <button onClick={() => setEditRoleTag('')} style={{ padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>
+                  Sin tag
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Links de afiliado */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Tu ID de afiliado Amazon</label>
+            <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Si tienes cuenta en Amazon Associates, pega aquí tu ID (ej: tunombre-21). Tus links llevarán tu ID y te llevarás la comisión.</p>
+            <input
+              value={editAmazonAffiliateId}
+              onChange={e => setEditAmazonAffiliateId(e.target.value)}
+              placeholder="ej: tunombre-21"
+              style={inputStyle}
+            />
+          </div>
+
+          {/* PcComponentes toggle */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Links de tiendas</label>
+            <button
+              onClick={() => setEditShowPcComponentes(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                background: 'var(--surface2)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)', padding: '10px 14px',
+                cursor: 'pointer', width: '100%', textAlign: 'left',
+              }}
+            >
+              <div style={{
+                width: 36, height: 20, borderRadius: 10, transition: 'background 0.2s',
+                background: editShowPcComponentes ? 'linear-gradient(135deg, #CFFA7C, #9CE89D)' : 'var(--border)',
+                position: 'relative', flexShrink: 0,
+              }}>
+                <div style={{
+                  width: 14, height: 14, borderRadius: '50%', background: '#fff',
+                  position: 'absolute', top: 3,
+                  left: editShowPcComponentes ? 19 : 3,
+                  transition: 'left 0.2s',
+                }} />
               </div>
-            )}
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Mostrar PcComponentes</div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Amazon siempre aparece. PcComponentes es opcional.</div>
+              </div>
+            </button>
           </div>
 
           {/* Título */}
@@ -833,7 +902,9 @@ setEditRoleTag(roleTag || '')
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>📍 Componentes del Setup</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {setup.pins.filter(p => p.name).map((pin, i) => {
-              const links = pin.links?.length > 0 ? pin.links : generateLinks(pin.name)
+              const links = pin.links?.length > 0
+                ? pin.links.filter(l => l.shop !== 'MediaMarkt' && (showPcComponentes || l.shop !== 'PcComponentes'))
+                : generateLinks(pin.name, showPcComponentes, amazonAffiliateId)
               return (
                 <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
@@ -859,7 +930,12 @@ setEditRoleTag(roleTag || '')
 
       {/* ── Tabs Periféricos / Internos ── */}
       {!editing && (peripherals.length > 0 || internals.length > 0) && (
-        <ComponentTabs peripherals={peripherals} internals={internals} />
+        <ComponentTabs
+          peripherals={peripherals}
+          internals={internals}
+          showPcComponentes={showPcComponentes}
+          affiliateId={amazonAffiliateId}
+        />
       )}
 
       <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.5 }}>
