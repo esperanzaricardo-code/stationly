@@ -62,6 +62,8 @@ function applyAccentColor(color: AccentColor) {
     red:    { accent: '#f87171', accent2: '#ef4444', glow: 'rgba(248,113,113,0.25)' },
     cyan:   { accent: '#22d3ee', accent2: '#38bdf8', glow: 'rgba(34,211,238,0.25)' },
     yellow: { accent: '#fde047', accent2: '#facc15', glow: 'rgba(253,224,71,0.25)' },
+    mint:   { accent: '#2dd4bf', accent2: '#34d399', glow: 'rgba(45,212,191,0.25)' },
+indigo: { accent: '#818cf8', accent2: '#6366f1', glow: 'rgba(129,140,248,0.25)' },
   }
   const c = colorMap[color] || colorMap.lime
   const root = document.documentElement
