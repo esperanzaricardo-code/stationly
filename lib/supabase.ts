@@ -42,7 +42,7 @@ export type Setup = {
   accent_color: string | null
 }
 
-export type AccentColor = 'lime' | 'blue' | 'purple' | 'pink' | 'orange' | 'red' | 'cyan' | 'yellow'
+export type AccentColor = 'lime' | 'blue' | 'purple' | 'pink' | 'orange' | 'red' | 'cyan' | 'yellow' | 'mint' | 'indigo'
 
 export const ACCENT_COLORS: { id: AccentColor; label: string; from: string; to: string }[] = [
   { id: 'lime',   label: 'Verde',   from: '#CFFA7C', to: '#9CE89D' },
@@ -53,4 +53,6 @@ export const ACCENT_COLORS: { id: AccentColor; label: string; from: string; to: 
   { id: 'red',    label: 'Rojo',    from: '#f87171', to: '#ef4444' },
   { id: 'cyan',   label: 'Cian',    from: '#22d3ee', to: '#38bdf8' },
   { id: 'yellow', label: 'Amarillo',from: '#fde047', to: '#facc15' },
+  { id: 'mint',   label: 'Menta',   from: '#2dd4bf', to: '#34d399' },
+  { id: 'indigo', label: 'Índigo',  from: '#818cf8', to: '#6366f1' },
 ]
