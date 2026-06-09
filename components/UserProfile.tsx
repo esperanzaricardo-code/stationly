@@ -895,38 +895,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         </div>
       )}
 
-      {/* ── Pins ── */}
-      {!editing && setup.pins && setup.pins.filter(p => p.name).length > 0 && (
-        <div style={{ marginBottom: 32 }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>📍 Componentes del Setup</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {setup.pins.filter(p => p.name).map((pin, i) => {
-              const links = pin.links?.length > 0
-                ? pin.links.filter(l => l.shop !== 'MediaMarkt' && (showPcComponentes || l.shop !== 'PcComponentes'))
-                : generateLinks(pin.name, showPcComponentes, amazonAffiliateId)
-              return (
-                <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11, color: '#0a0a0b' }}>
-                      {i + 1}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{pin.name}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {links.map((link, li) => (
-                      <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
-                        style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>
-                        {link.shop} →
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {/* ── Tabs Periféricos / Internos ── */}
       {!editing && (peripherals.length > 0 || internals.length > 0) && (
         <ComponentTabs
