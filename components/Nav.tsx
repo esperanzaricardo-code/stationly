@@ -36,6 +36,18 @@ function applyAppColor(color: AccentColor) {
   root.style.setProperty('--accent-glow', c.glow)
   root.style.setProperty('--tag-bg', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.1)`)
   root.style.setProperty('--tag-border', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.3)`)
+  root.style.setProperty('--tag-text', c.accent)
+}
+  const c = map[color] || map.lime
+  const root = document.documentElement
+  root.style.setProperty('--setup-accent', c.accent)
+  root.style.setProperty('--setup-accent2', c.accent2)
+  root.style.setProperty('--setup-accent-glow', c.glow)
+  root.style.setProperty('--accent', c.accent)
+  root.style.setProperty('--accent2', c.accent2)
+  root.style.setProperty('--accent-glow', c.glow)
+  root.style.setProperty('--tag-bg', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.1)`)
+  root.style.setProperty('--tag-border', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.3)`)
 }
 
 export default function Nav({ setupCount, totalLikes }: { setupCount?: number; totalLikes?: number }) {
