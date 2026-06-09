@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Setup, Component, ShopLink, Pin } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
+import { Setup, Component, ShopLink, Pin, AccentColor, ACCENT_COLORS } from '@/lib/supabase'
 import { supabase } from '@/lib/supabase'
 import PinEditor from './PinEditor'
 import ImageCropper from './ImageCropper'
@@ -72,9 +73,9 @@ function CategoryPill({ type, category }: { type: string; category?: string }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center',
       fontSize: 11, fontWeight: 600,
-      background: 'rgba(207,250,124,0.12)',
-      border: '1px solid rgba(207,250,124,0.25)',
-      color: '#b8e86a',
+      background: 'rgba(var(--setup-accent-rgb, 207,250,124),0.12)',
+      border: '1px solid rgba(var(--setup-accent-rgb, 207,250,124),0.25)',
+      color: 'var(--setup-accent)',
       padding: '2px 8px', borderRadius: 50, flexShrink: 0, whiteSpace: 'nowrap',
     }}>
       {label}
@@ -89,9 +90,7 @@ function ProfileTag({ tag }: { tag: string }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
       fontSize: 11, fontWeight: 700,
-      background: style.bg,
-      border: `1px solid ${style.border}`,
-      color: style.color,
+      background: style.bg, border: `1px solid ${style.border}`, color: style.color,
       padding: '2px 10px', borderRadius: 50, whiteSpace: 'nowrap',
       boxShadow: isFounder ? `0 0 8px ${style.border}` : 'none',
       letterSpacing: '0.3px',
@@ -125,7 +124,7 @@ function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId 
             cursor: 'pointer', transition: 'all 0.18s',
           }}>
             Periféricos
-            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'peripherals' ? '#b8e86a' : 'var(--text-dim)' }}>
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'peripherals' ? 'var(--setup-accent)' : 'var(--text-dim)' }}>
               {peripherals.length}
             </span>
           </button>
@@ -140,7 +139,7 @@ function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId 
             cursor: 'pointer', transition: 'all 0.18s',
           }}>
             Internos
-            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'internals' ? '#b8e86a' : 'var(--text-dim)' }}>
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'internals' ? 'var(--setup-accent)' : 'var(--text-dim)' }}>
               {internals.length}
             </span>
           </button>
@@ -161,7 +160,7 @@ function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId 
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {links.map((link, li) => (
                   <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
-                    style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>
+                    style={{ background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, color: 'var(--setup-accent-fg)', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>
                     {link.shop} →
                   </a>
                 ))}
@@ -177,6 +176,7 @@ function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId 
 type Props = { setups: Setup[]; username: string; activeSetupId?: string }
 
 export default function UserProfile({ setups: initialSetups, username, activeSetupId }: Props) {
+  const router = useRouter()
   const [setups, setSetups] = useState(initialSetups)
   const [activeSetup, setActiveSetup] = useState(() => {
     if (!activeSetupId) return 0
@@ -191,7 +191,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
 
   const [profileTag, setProfileTag] = useState<string | null>(null)
   const [roleTag, setRoleTag] = useState<string | null>(null)
-  const [editTag, setEditTag] = useState<string>('')
   const [editRoleTag, setEditRoleTag] = useState<string>('')
   const [savingTag, setSavingTag] = useState(false)
 
@@ -199,6 +198,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [editAmazonAffiliateId, setEditAmazonAffiliateId] = useState<string>('')
   const [showPcComponentes, setShowPcComponentes] = useState(true)
   const [editShowPcComponentes, setEditShowPcComponentes] = useState(true)
+
+  const [editAccentColor, setEditAccentColor] = useState<AccentColor>('lime')
 
   const [likes, setLikes] = useState<Record<string, number>>({})
   const [liked, setLiked] = useState<Record<string, boolean>>({})
@@ -226,6 +227,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [editingName, setEditingName] = useState('')
 
   const setup = setups[activeSetup]
+  const currentAccent = (setup?.accent_color || 'lime') as AccentColor
 
   const PLACEHOLDER_COLORS = [
     ['#1a1a2e','#16213e','#0f3460'],
@@ -262,6 +264,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     document.addEventListener('stationly:new-setup', onNewSetup)
     return () => document.removeEventListener('stationly:new-setup', onNewSetup)
   }, [username, initialSetups])
+
+  function switchSetup(index: number) {
+    setActiveSetup(index)
+    setEditing(false)
+    const setupId = setups[index].id
+    router.replace(`/u/${encodeURIComponent(username)}?setup=${setupId}`, { scroll: false })
+  }
 
   async function saveProfile() {
     setSavingTag(true)
@@ -327,10 +336,10 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setScanResults([])
     setScanDone(false)
     setShowAdvanced(false)
-    setEditTag(profileTag || '')
     setEditRoleTag(roleTag || '')
     setEditAmazonAffiliateId(amazonAffiliateId || '')
     setEditShowPcComponentes(showPcComponentes)
+    setEditAccentColor((setup.accent_color || 'lime') as AccentColor)
     setEditing(true)
   }
 
@@ -494,6 +503,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         components: editComponents.filter(c => c.name.trim()),
         pins: editPins.filter(p => p.name.trim()),
         image_url,
+        accent_color: editAccentColor,
       }
       const res = await fetch('/api/setups', {
         method: 'PUT',
@@ -556,11 +566,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const peripherals = setup.components?.filter(c => c.type === 'peripheral' && c.name.trim()) || []
 
   return (
-    <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
-
+    <div
+      data-setup-color={currentAccent}
+      style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}
+    >
       {/* ── Profile header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 36, flexWrap: 'wrap' }}>
-        <div style={{ width: 72, height: 72, borderRadius: '50%', flexShrink: 0, background: getAvatarGradient(username), fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0b', border: '3px solid var(--accent)', boxShadow: '0 0 20px var(--accent-glow)' }}>
+        <div style={{ width: 72, height: 72, borderRadius: '50%', flexShrink: 0, background: getAvatarGradient(username), fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0b', border: '3px solid var(--setup-accent)', boxShadow: '0 0 20px var(--setup-accent-glow)' }}>
           {username.slice(0, 2).toUpperCase()}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -594,11 +606,11 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       {setups.length > 1 && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto', scrollbarWidth: 'none' }}>
           {setups.map((s, i) => (
-            <button key={s.id} onClick={() => { setActiveSetup(i); setEditing(false) }} style={{
+            <button key={s.id} onClick={() => switchSetup(i)} style={{
               flexShrink: 0, padding: '7px 16px', borderRadius: 50,
-              background: activeSetup === i ? 'linear-gradient(135deg, #CFFA7C, #9CE89D)' : 'var(--surface2)',
+              background: activeSetup === i ? `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))` : 'var(--surface2)',
               border: activeSetup === i ? 'none' : '1px solid var(--border)',
-              color: activeSetup === i ? '#0a0a0b' : 'var(--text-muted)',
+              color: activeSetup === i ? 'var(--setup-accent-fg)' : 'var(--text-muted)',
               fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
               cursor: 'pointer', transition: 'all 0.18s',
             } as React.CSSProperties}>
@@ -610,8 +622,28 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
 
       {/* ── MODO EDICIÓN ── */}
       {editing && isOwner && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--accent)', borderRadius: 'var(--radius)', padding: 28, marginBottom: 28 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--setup-accent)', borderRadius: 'var(--radius)', padding: 28, marginBottom: 28 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>✏️ Editando: {setup.title}</h2>
+
+          {/* Color del setup */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color del setup</label>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {ACCENT_COLORS.map(color => (
+                <button key={color.id} onClick={() => setEditAccentColor(color.id)}
+                  title={color.label}
+                  style={{
+                    width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', border: 'none',
+                    background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
+                    outline: editAccentColor === color.id ? `3px solid ${color.from}` : '3px solid transparent',
+                    outlineOffset: 2,
+                    boxShadow: editAccentColor === color.id ? `0 0 12px ${color.from}88` : 'none',
+                    transition: 'all 0.18s',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
 
           {/* Tag */}
           <div style={{ marginBottom: 20 }}>
@@ -646,37 +678,16 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Tu ID de afiliado Amazon</label>
             <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Si tienes cuenta en Amazon Associates, pega aquí tu ID (ej: tunombre-21). Tus links llevarán tu ID y te llevarás la comisión.</p>
-            <input
-              value={editAmazonAffiliateId}
-              onChange={e => setEditAmazonAffiliateId(e.target.value)}
-              placeholder="ej: tunombre-21"
-              style={inputStyle}
-            />
+            <input value={editAmazonAffiliateId} onChange={e => setEditAmazonAffiliateId(e.target.value)} placeholder="ej: tunombre-21" style={inputStyle} />
           </div>
 
           {/* PcComponentes toggle */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Links de tiendas</label>
-            <button
-              onClick={() => setEditShowPcComponentes(v => !v)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                background: 'var(--surface2)', border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-sm)', padding: '10px 14px',
-                cursor: 'pointer', width: '100%', textAlign: 'left',
-              }}
-            >
-              <div style={{
-                width: 36, height: 20, borderRadius: 10, transition: 'background 0.2s',
-                background: editShowPcComponentes ? 'linear-gradient(135deg, #CFFA7C, #9CE89D)' : 'var(--border)',
-                position: 'relative', flexShrink: 0,
-              }}>
-                <div style={{
-                  width: 14, height: 14, borderRadius: '50%', background: '#fff',
-                  position: 'absolute', top: 3,
-                  left: editShowPcComponentes ? 19 : 3,
-                  transition: 'left 0.2s',
-                }} />
+            <button onClick={() => setEditShowPcComponentes(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
+              <div style={{ width: 36, height: 20, borderRadius: 10, transition: 'background 0.2s', background: editShowPcComponentes ? `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))` : 'var(--border)', position: 'relative', flexShrink: 0 }}>
+                <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#fff', position: 'absolute', top: 3, left: editShowPcComponentes ? 19 : 3, transition: 'left 0.2s' }} />
               </div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Mostrar PcComponentes</div>
@@ -720,13 +731,9 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
               Escribe tus componentes como quieras. La IA los identificará y clasificará automáticamente.
             </p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <textarea
-                value={componentText}
-                onChange={e => setComponentText(e.target.value)}
+              <textarea value={componentText} onChange={e => setComponentText(e.target.value)}
                 placeholder="Ej: RTX 4090 monitor LG 27 pulgadas keychron q1 logitech g pro ram 32gb..."
-                rows={3}
-                style={{ ...inputStyle, resize: 'vertical', flex: 1 }}
-              />
+                rows={3} style={{ ...inputStyle, resize: 'vertical', flex: 1 }} />
               <button onClick={scanComponents} disabled={scanning || !componentText.trim()} className="btn-primary"
                 style={{ fontSize: 13, padding: '0 16px', opacity: scanning || !componentText.trim() ? 0.5 : 1, flexShrink: 0, alignSelf: 'flex-start', height: 42 }}>
                 {scanning ? '⏳' : '✦ Analizar'}
@@ -746,7 +753,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
                     ✦ {scanResults.length} componente{scanResults.length !== 1 ? 's' : ''} detectado{scanResults.length !== 1 ? 's' : ''}
                   </div>
-                  <button onClick={acceptAll} style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', border: 'none', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, cursor: 'pointer', fontFamily: 'var(--font-display)' }}>
+                  <button onClick={acceptAll} style={{ background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, border: 'none', color: 'var(--setup-accent-fg)', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, cursor: 'pointer', fontFamily: 'var(--font-display)' }}>
                     ✓ Aceptar todos
                   </button>
                 </div>
@@ -760,11 +767,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: comp.did_you_mean ? 4 : 0 }}>
                             <CategoryPill type={comp.type} category={comp.category} />
-                            <input
-                              value={comp.name}
-                              onChange={e => updateScanResultName(i, e.target.value)}
-                              style={{ background: 'transparent', border: 'none', borderBottom: '1px dashed var(--border)', color: comp.unknown ? '#ff4d6d' : 'var(--text)', fontSize: 13, fontWeight: 600, outline: 'none', flex: 1, minWidth: 0, cursor: 'text', fontFamily: 'var(--font-display)', padding: '2px 4px' }}
-                            />
+                            <input value={comp.name} onChange={e => updateScanResultName(i, e.target.value)}
+                              style={{ background: 'transparent', border: 'none', borderBottom: '1px dashed var(--border)', color: comp.unknown ? '#ff4d6d' : 'var(--text)', fontSize: 13, fontWeight: 600, outline: 'none', flex: 1, minWidth: 0, cursor: 'text', fontFamily: 'var(--font-display)', padding: '2px 4px' }} />
                             <span style={{ fontSize: 11, color: 'var(--text-dim)', flexShrink: 0 }}>✏️</span>
                           </div>
                           {comp.did_you_mean && (
@@ -780,7 +784,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                           <button onClick={() => comp.did_you_mean ? acceptSuggestion(comp) : acceptComponent(comp)}
-                            style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', border: 'none', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>✓</button>
+                            style={{ background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, border: 'none', color: 'var(--setup-accent-fg)', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>✓</button>
                           <button onClick={() => rejectComponent(comp)}
                             style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>✕</button>
                         </div>
@@ -825,7 +829,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             </div>
           )}
 
-          {/* Pins — opciones avanzadas */}
+          {/* Pins */}
           <div style={{ marginBottom: 24 }}>
             <button onClick={() => setShowAdvanced(v => !v)}
               style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', cursor: 'pointer', fontSize: 13, width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -834,8 +838,9 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             </button>
             {showAdvanced && (newImagePreview || setup.image_url) && (
               <div style={{ marginTop: 12 }}>
-                <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>Toca la imagen para añadir un pin en cada componente visible.</p>
-<PinEditor imageUrl={newImagePreview || setup.image_url || ''} pins={editPins} isOwner={isOwner} editing={true} components={editComponents} onChange={setEditPins} />              </div>
+                <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>Toca la imagen para marcar un componente.</p>
+                <PinEditor imageUrl={newImagePreview || setup.image_url || ''} pins={editPins} isOwner={isOwner} editing={true} components={editComponents} onChange={setEditPins} />
+              </div>
             )}
           </div>
 
