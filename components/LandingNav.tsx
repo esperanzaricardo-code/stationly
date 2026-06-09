@@ -50,7 +50,7 @@ export default function LandingNav() {
               letterSpacing: '-0.5px', color: 'var(--text)',
             }}>
               Station<span style={{
-                background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+                background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               }}>ly</span>
             </span>
@@ -92,7 +92,7 @@ export default function LandingNav() {
               }}>
                 <div style={{
                   width: 26, height: 26, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+                  background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11,
                   color: '#0a0a0b',
@@ -172,7 +172,7 @@ export default function LandingNav() {
               }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+                  background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 12,
                   color: '#0a0a0b',
