@@ -2,15 +2,59 @@
 import { useEffect, useState } from 'react'
 import { useTheme } from './ThemeProvider'
 import { supabase } from '@/lib/supabase'
+import { ACCENT_COLORS, AccentColor } from '@/lib/supabase'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+
+function getStoredAppColor(): AccentColor {
+  if (typeof window === 'undefined') return 'lime'
+  try { return (localStorage.getItem('stationly-app-color') as AccentColor) || 'lime' } catch { return 'lime' }
+}
+
+function setStoredAppColor(color: AccentColor) {
+  try { localStorage.setItem('stationly-app-color', color) } catch {}
+}
+
+function applyAppColor(color: AccentColor) {
+  const map: Record<AccentColor, { accent: string; accent2: string; glow: string }> = {
+    lime:   { accent: '#CFFA7C', accent2: '#9CE89D', glow: 'rgba(207,250,124,0.25)' },
+    blue:   { accent: '#60a5fa', accent2: '#818cf8', glow: 'rgba(96,165,250,0.25)' },
+    purple: { accent: '#c084fc', accent2: '#a855f7', glow: 'rgba(192,132,252,0.25)' },
+    pink:   { accent: '#f472b6', accent2: '#fb7185', glow: 'rgba(244,114,182,0.25)' },
+    orange: { accent: '#fb923c', accent2: '#fbbf24', glow: 'rgba(251,146,60,0.25)' },
+    red:    { accent: '#f87171', accent2: '#ef4444', glow: 'rgba(248,113,113,0.25)' },
+    cyan:   { accent: '#22d3ee', accent2: '#38bdf8', glow: 'rgba(34,211,238,0.25)' },
+    yellow: { accent: '#fde047', accent2: '#facc15', glow: 'rgba(253,224,71,0.25)' },
+  }
+  const c = map[color] || map.lime
+  const root = document.documentElement
+  root.style.setProperty('--setup-accent', c.accent)
+  root.style.setProperty('--setup-accent2', c.accent2)
+  root.style.setProperty('--setup-accent-glow', c.glow)
+  root.style.setProperty('--accent', c.accent)
+  root.style.setProperty('--accent2', c.accent2)
+  root.style.setProperty('--accent-glow', c.glow)
+  root.style.setProperty('--tag-bg', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.1)`)
+  root.style.setProperty('--tag-border', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.3)`)
+}
 
 export default function Nav({ setupCount, totalLikes }: { setupCount?: number; totalLikes?: number }) {
   const { theme, toggle } = useTheme()
   const router = useRouter()
+  const pathname = usePathname()
   const [loggedIn, setLoggedIn] = useState(false)
   const [username, setUsername] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [appColor, setAppColor] = useState<AccentColor>('lime')
+
+  const isProfilePage = pathname?.startsWith('/u/')
+
+  useEffect(() => {
+    const stored = getStoredAppColor()
+    setAppColor(stored)
+    if (!isProfilePage) applyAppColor(stored)
+  }, [isProfilePage])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -18,6 +62,15 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
       if (user) {
         setLoggedIn(true)
         setUsername(user.user_metadata?.username || user.email?.split('@')[0] || '')
+        supabase.from('profiles').select('app_accent_color').eq('username', user.user_metadata?.username || user.email?.split('@')[0] || '').single()
+          .then(({ data: profile }) => {
+            if (profile?.app_accent_color) {
+              const color = profile.app_accent_color as AccentColor
+              setAppColor(color)
+              setStoredAppColor(color)
+              if (!isProfilePage) applyAppColor(color)
+            }
+          })
       }
     })
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -31,7 +84,16 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
       }
     })
     return () => listener.subscription.unsubscribe()
-  }, [])
+  }, [isProfilePage])
+
+  async function changeAppColor(color: AccentColor) {
+    setAppColor(color)
+    setStoredAppColor(color)
+    if (!isProfilePage) applyAppColor(color)
+    if (loggedIn && username) {
+      await supabase.from('profiles').upsert({ username, app_accent_color: color }, { onConflict: 'username' })
+    }
+  }
 
   function handleUpload() {
     setMenuOpen(false)
@@ -54,14 +116,8 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
         {/* Logo + Beta */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Link href={loggedIn ? '/feed' : '/'} style={{ textDecoration: 'none' }}>
-            <span style={{
-              fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22,
-              letterSpacing: '-0.5px', color: 'var(--text)',
-            }}>
-              Station<span style={{
-                background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              }}>ly</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, letterSpacing: '-0.5px', color: 'var(--text)' }}>
+              Station<span style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ly</span>
             </span>
           </Link>
           <div style={{
@@ -71,25 +127,79 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
             letterSpacing: '1px', textTransform: 'uppercase',
             padding: '3px 8px', borderRadius: 50, marginTop: 4,
           }}>
-            <span style={{
-              width: 5, height: 5, borderRadius: '50%',
-              background: 'var(--accent)', display: 'inline-block',
-              animation: 'pulse 2s ease infinite',
-            }} />
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block', animation: 'pulse 2s ease infinite' }} />
             Beta
           </div>
         </div>
 
         {/* Desktop */}
         <div className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={toggle} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} style={{
-            background: 'var(--surface2)', border: '1px solid var(--border)',
-            color: 'var(--text-muted)', width: 38, height: 38, borderRadius: '50%',
-            fontSize: 16, cursor: 'pointer', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
-          }}>
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
+
+          {/* Botón ajustes */}
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setSettingsOpen(o => !o)} title="Ajustes de apariencia" style={{
+              background: settingsOpen ? 'var(--surface3)' : 'var(--surface2)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-muted)', width: 38, height: 38, borderRadius: '50%',
+              fontSize: 16, cursor: 'pointer', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+            }}>
+              ⚙️
+            </button>
+
+            {settingsOpen && (
+              <div style={{
+                position: 'absolute', top: 46, right: 0,
+                background: 'var(--surface)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)', padding: 20,
+                minWidth: 240, boxShadow: 'var(--shadow-lg)', zIndex: 200,
+              }}>
+                {/* Tema */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Tema</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {(['dark', 'light'] as const).map(t => (
+                      <button key={t} onClick={toggle} style={{
+                        flex: 1, padding: '8px', borderRadius: 'var(--radius-sm)',
+                        background: theme === t ? 'var(--surface3)' : 'var(--surface2)',
+                        border: `1px solid ${theme === t ? 'var(--accent)' : 'var(--border)'}`,
+                        color: theme === t ? 'var(--text)' : 'var(--text-muted)',
+                        fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
+                        cursor: 'pointer', transition: 'all 0.18s',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      }}>
+                        {t === 'dark' ? '🌙 Oscuro' : '☀️ Claro'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Color */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {ACCENT_COLORS.map(color => (
+                      <button key={color.id} onClick={() => changeAppColor(color.id)} title={color.label}
+                        style={{
+                          width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', border: 'none',
+                          background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
+                          outline: appColor === color.id ? `3px solid ${color.from}` : '3px solid transparent',
+                          outlineOffset: 2,
+                          boxShadow: appColor === color.id ? `0 0 10px ${color.from}88` : 'none',
+                          transition: 'all 0.18s',
+                        }}
+                      />
+                    ))}
+                  </div>
+                  {isProfilePage && (
+                    <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 10, lineHeight: 1.5 }}>
+                      En perfiles ajenos se muestra el color elegido por su dueño.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {loggedIn ? (
             <>
@@ -101,7 +211,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
               }}>
                 <div style={{
                   width: 26, height: 26, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+                  background: `linear-gradient(135deg, var(--accent), var(--accent2))`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11,
                   color: '#0a0a0b', flexShrink: 0,
@@ -129,14 +239,6 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
 
         {/* Mobile */}
         <div className="nav-mobile" style={{ display: 'none', alignItems: 'center', gap: 8 }}>
-          <button onClick={toggle} style={{
-            background: 'var(--surface2)', border: '1px solid var(--border)',
-            color: 'var(--text-muted)', width: 36, height: 36, borderRadius: '50%',
-            fontSize: 14, cursor: 'pointer', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-          }}>
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
           <button onClick={() => setMenuOpen(o => !o)} style={{
             background: 'var(--surface2)', border: '1px solid var(--border)',
             color: 'var(--text)', width: 36, height: 36, borderRadius: '50%',
@@ -164,6 +266,45 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
           display: 'flex', flexDirection: 'column', gap: 10,
           boxShadow: 'var(--shadow-lg)',
         }}>
+          {/* Tema */}
+          <div style={{ marginBottom: 4 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8 }}>Tema</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {(['dark', 'light'] as const).map(t => (
+                <button key={t} onClick={toggle} style={{
+                  flex: 1, padding: '8px', borderRadius: 'var(--radius-sm)',
+                  background: theme === t ? 'var(--surface3)' : 'var(--surface2)',
+                  border: `1px solid ${theme === t ? 'var(--accent)' : 'var(--border)'}`,
+                  color: theme === t ? 'var(--text)' : 'var(--text-muted)',
+                  fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}>
+                  {t === 'dark' ? '🌙 Oscuro' : '☀️ Claro'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color */}
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8 }}>Color</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {ACCENT_COLORS.map(color => (
+                <button key={color.id} onClick={() => { changeAppColor(color.id) }} title={color.label}
+                  style={{
+                    width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', border: 'none',
+                    background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
+                    outline: appColor === color.id ? `3px solid ${color.from}` : '3px solid transparent',
+                    outlineOffset: 2,
+                    boxShadow: appColor === color.id ? `0 0 10px ${color.from}88` : 'none',
+                    transition: 'all 0.18s',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
           {loggedIn ? (
             <>
               <Link href={`/u/${username}`} onClick={() => setMenuOpen(false)} style={{
@@ -174,7 +315,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
               }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)',
+                  background: `linear-gradient(135deg, var(--accent), var(--accent2))`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 12,
                   color: '#0a0a0b',
