@@ -52,6 +52,50 @@ function totalComponents(setups: Setup[]) {
   }, 0)
 }
 
+// ── Sistema de borrador (autoguardado en localStorage) ──
+type SetupDraft = {
+  title: string
+  components: Component[]
+  pins: Pin[]
+  accentColor: AccentColor
+  componentText: string
+  scanResults: Component[]
+  scanDone: boolean
+  savedAt: number
+}
+
+function draftKey(setupId: string) {
+  return `stationly-draft-${setupId}`
+}
+
+function saveDraft(setupId: string, draft: SetupDraft) {
+  try {
+    localStorage.setItem(draftKey(setupId), JSON.stringify(draft))
+  } catch {}
+}
+
+function loadDraft(setupId: string): SetupDraft | null {
+  try {
+    const raw = localStorage.getItem(draftKey(setupId))
+    if (!raw) return null
+    const draft = JSON.parse(raw) as SetupDraft
+    // Borradores de más de 7 días se descartan
+    if (Date.now() - (draft.savedAt || 0) > 7 * 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(draftKey(setupId))
+      return null
+    }
+    return draft
+  } catch {
+    return null
+  }
+}
+
+function clearDraft(setupId: string) {
+  try {
+    localStorage.removeItem(draftKey(setupId))
+  } catch {}
+}
+
 function applyAccentColor(color: AccentColor) {
   const colorMap: Record<AccentColor, { accent: string; accent2: string; glow: string }> = {
     lime:   { accent: '#CFFA7C', accent2: '#9CE89D', glow: 'rgba(207,250,124,0.25)' },
@@ -63,7 +107,7 @@ function applyAccentColor(color: AccentColor) {
     cyan:   { accent: '#22d3ee', accent2: '#38bdf8', glow: 'rgba(34,211,238,0.25)' },
     yellow: { accent: '#fde047', accent2: '#facc15', glow: 'rgba(253,224,71,0.25)' },
     mint:   { accent: '#2dd4bf', accent2: '#34d399', glow: 'rgba(45,212,191,0.25)' },
-indigo: { accent: '#818cf8', accent2: '#6366f1', glow: 'rgba(129,140,248,0.25)' },
+    indigo: { accent: '#818cf8', accent2: '#6366f1', glow: 'rgba(129,140,248,0.25)' },
   }
   const c = colorMap[color] || colorMap.lime
   const root = document.documentElement
@@ -224,6 +268,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [scanDone, setScanDone] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editingName, setEditingName] = useState('')
+  const [draftRestored, setDraftRestored] = useState(false)
 
   const [likes, setLikes] = useState<Record<string, number>>({})
   const [liked, setLiked] = useState<Record<string, boolean>>({})
@@ -273,6 +318,35 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     document.addEventListener('stationly:new-setup', onNewSetup)
     return () => document.removeEventListener('stationly:new-setup', onNewSetup)
   }, [username, initialSetups])
+
+  // ── Autoguardado del borrador mientras se edita ──
+  useEffect(() => {
+    if (!editing || !setup) return
+    const timeout = setTimeout(() => {
+      saveDraft(setup.id, {
+        title: editTitle,
+        components: editComponents,
+        pins: editPins,
+        accentColor: editAccentColor,
+        componentText,
+        scanResults,
+        scanDone,
+        savedAt: Date.now(),
+      })
+    }, 400)
+    return () => clearTimeout(timeout)
+  }, [editing, editTitle, editComponents, editPins, editAccentColor, componentText, scanResults, scanDone, setup])
+
+  // ── Aviso del navegador al cerrar/recargar con la edición abierta ──
+  useEffect(() => {
+    if (!editing) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [editing])
 
   function switchSetup(index: number) {
     setActiveSetup(index)
@@ -349,18 +423,34 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   }
 
   function startEditing() {
-    setEditTitle(setup.title)
-    setEditComponents(setup.components ? setup.components.map(c => ({ ...c, links: c.links || [] })) : [])
-    setEditPins(setup.pins || [])
+    const draft = loadDraft(setup.id)
+    const useDraft = draft && window.confirm('📝 Tienes un borrador sin guardar de este setup. ¿Quieres recuperarlo?')
+
+    if (useDraft && draft) {
+      setEditTitle(draft.title)
+      setEditComponents(draft.components || [])
+      setEditPins(draft.pins || [])
+      setEditAccentColor(draft.accentColor || (setup.accent_color || 'lime') as AccentColor)
+      setComponentText(draft.componentText || '')
+      setScanResults(draft.scanResults || [])
+      setScanDone(draft.scanDone || false)
+      setDraftRestored(true)
+    } else {
+      if (draft) clearDraft(setup.id)
+      setEditTitle(setup.title)
+      setEditComponents(setup.components ? setup.components.map(c => ({ ...c, links: c.links || [] })) : [])
+      setEditPins(setup.pins || [])
+      setComponentText('')
+      setScanResults([])
+      setScanDone(false)
+      setEditAccentColor((setup.accent_color || 'lime') as AccentColor)
+      setDraftRestored(false)
+    }
     setNewImageFile(null)
     setNewImagePreview(null)
     setRawImagePreview(null)
     setShowCropper(false)
-    setComponentText('')
-    setScanResults([])
-    setScanDone(false)
     setShowAdvanced(false)
-    setEditAccentColor((setup.accent_color || 'lime') as AccentColor)
     setEditing(true)
   }
 
@@ -374,6 +464,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setScanDone(false)
     setShowAdvanced(false)
     setEditingIndex(null)
+    setDraftRestored(false)
   }
 
   function handleImageFile(file: File) {
@@ -454,6 +545,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       const res = await fetch('/api/setups', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ setupId: setup.id, sessionToken }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
+      clearDraft(setup.id)
       const newSetups = setups.filter(s => s.id !== setup.id)
       setSetups(newSetups); setActiveSetup(0); setEditing(false)
     } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error al eliminar') }
@@ -491,9 +583,10 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       const res = await fetch('/api/setups', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ setupId: setup.id, sessionToken, updates }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
+      clearDraft(setup.id)
       setSetups(prev => prev.map((s, i) => i === activeSetup ? { ...s, ...updates, image_url: image_url ?? s.image_url } : s))
       applyAccentColor(editAccentColor)
-      setEditing(false); setNewImageFile(null); setNewImagePreview(null); setRawImagePreview(null); setShowCropper(false); setScanResults([]); setScanDone(false)
+      setEditing(false); setNewImageFile(null); setNewImagePreview(null); setRawImagePreview(null); setShowCropper(false); setScanResults([]); setScanDone(false); setDraftRestored(false)
     } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error al guardar') }
     finally { setSaving(false) }
   }
@@ -676,7 +769,12 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       {/* ── MODO EDICIÓN SETUP ── */}
       {editing && isOwner && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--setup-accent)', borderRadius: 'var(--radius)', padding: 28, marginBottom: 28 }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>✏️ Editando: {setup.title}</h2>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>✏️ Editando: {setup.title}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+              💾 Borrador guardado automáticamente{draftRestored ? ' · Borrador recuperado' : ''}
+            </span>
+          </div>
 
           {/* Color del setup */}
           <div style={{ marginBottom: 20 }}>
