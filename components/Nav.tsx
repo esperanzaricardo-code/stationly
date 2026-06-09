@@ -38,18 +38,7 @@ function applyAppColor(color: AccentColor) {
   root.style.setProperty('--tag-border', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.3)`)
   root.style.setProperty('--tag-text', c.accent)
 }
-  const c = map[color] || map.lime
-  const root = document.documentElement
-  root.style.setProperty('--setup-accent', c.accent)
-  root.style.setProperty('--setup-accent2', c.accent2)
-  root.style.setProperty('--setup-accent-glow', c.glow)
-  root.style.setProperty('--accent', c.accent)
-  root.style.setProperty('--accent2', c.accent2)
-  root.style.setProperty('--accent-glow', c.glow)
-  root.style.setProperty('--tag-bg', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.1)`)
-  root.style.setProperty('--tag-border', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.3)`)
-  root.style.setProperty('--tag-text', c.accent)
-}
+
 export default function Nav({ setupCount, totalLikes }: { setupCount?: number; totalLikes?: number }) {
   const { theme, toggle } = useTheme()
   const router = useRouter()
@@ -188,7 +177,6 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
                   borderRadius: 'var(--radius)', padding: 20,
                   minWidth: 240, boxShadow: 'var(--shadow-lg)', zIndex: 200,
                 }}>
-                  {/* Tema */}
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Tema</div>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -207,8 +195,6 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
                       ))}
                     </div>
                   </div>
-
-                  {/* Color */}
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color</div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -301,7 +287,6 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
           display: 'flex', flexDirection: 'column', gap: 10,
           boxShadow: 'var(--shadow-lg)',
         }}>
-          {/* Tema */}
           <div style={{ marginBottom: 4 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8 }}>Tema</div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -321,7 +306,6 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
             </div>
           </div>
 
-          {/* Color — solo registrados */}
           {loggedIn && (
             <div style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8 }}>Color</div>
