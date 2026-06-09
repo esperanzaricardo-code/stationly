@@ -204,10 +204,23 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, components
             }}
           >
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 8, fontFamily: 'var(--font-display)' }}>
-              ¿Qué componente es este?
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
-              {components.map((comp, i) => (
+  ¿Qué componente es este?
+</div>
+<input
+  autoFocus
+  placeholder="Buscar componente..."
+  value={pendingSearch}
+  onChange={e => setPendingSearch(e.target.value)}
+  onClick={e => e.stopPropagation()}
+  style={{
+    background: 'var(--surface2)', border: '1px solid var(--border)',
+    color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 12,
+    padding: '6px 10px', borderRadius: 'var(--radius-sm)', outline: 'none',
+    width: '100%', marginBottom: 8, boxSizing: 'border-box',
+  }}
+/>
+<div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
+  {components.filter(c => c.name.toLowerCase().includes(pendingSearch.toLowerCase())).map((comp, i) => (
                 <button key={i} onClick={() => selectComponentForPin(comp.name)}
                   style={{
                     background: 'var(--surface2)', border: '1px solid var(--border)',
