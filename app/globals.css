@@ -37,7 +37,6 @@
 
   --diag-opacity: 0.055;
 
-  /* ── Setup accent (default: lime) ── */
   --setup-accent: #CFFA7C;
   --setup-accent2: #9CE89D;
   --setup-accent-glow: rgba(207,250,124,0.25);
@@ -125,6 +124,18 @@
   --setup-accent: #fde047;
   --setup-accent2: #facc15;
   --setup-accent-glow: rgba(253,224,71,0.25);
+  --setup-accent-fg: #0a0a0b;
+}
+[data-setup-color="mint"] {
+  --setup-accent: #2dd4bf;
+  --setup-accent2: #34d399;
+  --setup-accent-glow: rgba(45,212,191,0.25);
+  --setup-accent-fg: #0a0a0b;
+}
+[data-setup-color="indigo"] {
+  --setup-accent: #818cf8;
+  --setup-accent2: #6366f1;
+  --setup-accent-glow: rgba(129,140,248,0.25);
   --setup-accent-fg: #0a0a0b;
 }
 
