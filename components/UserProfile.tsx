@@ -66,6 +66,78 @@ function CategoryPill({ type, category }: { type: string; category?: string }) {
   )
 }
 
+function ComponentTabs({ peripherals, internals }: { peripherals: Component[]; internals: Component[] }) {
+  const [activeTab, setActiveTab] = useState<'peripherals' | 'internals'>(
+    peripherals.length > 0 ? 'peripherals' : 'internals'
+  )
+  const items = activeTab === 'peripherals' ? peripherals : internals
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ display: 'flex', gap: 2, marginBottom: 16, background: 'var(--surface2)', borderRadius: 'var(--radius-sm)', padding: 4, width: 'fit-content' }}>
+        {peripherals.length > 0 && (
+          <button
+            onClick={() => setActiveTab('peripherals')}
+            style={{
+              padding: '7px 18px', borderRadius: 'var(--radius-sm)',
+              background: activeTab === 'peripherals' ? 'var(--surface)' : 'transparent',
+              border: activeTab === 'peripherals' ? '1px solid var(--border)' : '1px solid transparent',
+              color: activeTab === 'peripherals' ? 'var(--text)' : 'var(--text-muted)',
+              fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', transition: 'all 0.18s',
+            }}
+          >
+            Periféricos
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'peripherals' ? '#b8e86a' : 'var(--text-dim)' }}>
+              {peripherals.length}
+            </span>
+          </button>
+        )}
+        {internals.length > 0 && (
+          <button
+            onClick={() => setActiveTab('internals')}
+            style={{
+              padding: '7px 18px', borderRadius: 'var(--radius-sm)',
+              background: activeTab === 'internals' ? 'var(--surface)' : 'transparent',
+              border: activeTab === 'internals' ? '1px solid var(--border)' : '1px solid transparent',
+              color: activeTab === 'internals' ? 'var(--text)' : 'var(--text-muted)',
+              fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', transition: 'all 0.18s',
+            }}
+          >
+            Internos
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'internals' ? '#b8e86a' : 'var(--text-dim)' }}>
+              {internals.length}
+            </span>
+          </button>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {items.map((comp, i) => {
+          const links = comp.links?.length > 0 ? comp.links : generateLinks(comp.name)
+          return (
+            <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                <CategoryPill type={comp.type} category={comp.category} />
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{comp.name}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {links.map((link, li) => (
+                  <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
+                    style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>
+                    {link.shop} →
+                  </a>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 type Props = { setups: Setup[]; username: string; activeSetupId?: string }
 
 export default function UserProfile({ setups: initialSetups, username, activeSetupId }: Props) {
@@ -510,7 +582,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
               </button>
             </div>
 
-            {/* Botón foto complementario */}
             <input ref={photoScanRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
               onChange={e => e.target.files?.[0] && scanComponentPhoto(e.target.files[0])} />
             <button onClick={() => photoScanRef.current?.click()} disabled={photoScanning}
@@ -518,7 +589,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
               {photoScanning ? '⏳ Identificando...' : '📷 ¿No sabes el nombre? Haz una foto al componente'}
             </button>
 
-            {/* Resultados */}
             {scanDone && scanResults.length > 0 && (
               <div style={{ marginTop: 12, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -705,60 +775,9 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         </div>
       )}
 
-      {/* ── Periféricos ── */}
-      {!editing && peripherals.length > 0 && (
-        <div style={{ marginBottom: 32 }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🖱️ Periféricos y Accesorios</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {peripherals.map((comp, i) => {
-              const links = comp.links?.length > 0 ? comp.links : generateLinks(comp.name)
-              return (
-                <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-                    <CategoryPill type={comp.type} category={comp.category} />
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{comp.name}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {links.map((link, li) => (
-                      <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
-                        style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>
-                        {link.shop} →
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Componentes internos ── */}
-      {!editing && internals.length > 0 && (
-        <div style={{ marginBottom: 32 }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 16 }}>🔧 Componentes Internos del PC</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {internals.map((comp, i) => {
-              const links = comp.links?.length > 0 ? comp.links : generateLinks(comp.name)
-              return (
-                <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-                    <CategoryPill type={comp.type} category={comp.category} />
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{comp.name}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {links.map((link, li) => (
-                      <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
-                        style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>
-                        {link.shop} →
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+      {/* ── Tabs Periféricos / Internos ── */}
+      {!editing && (peripherals.length > 0 || internals.length > 0) && (
+        <ComponentTabs peripherals={peripherals} internals={internals} />
       )}
 
       <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.5 }}>
