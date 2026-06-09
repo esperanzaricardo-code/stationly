@@ -1,5 +1,3 @@
-
-
 /* ── DARK MODE (default) ── */
 :root {
   --bg: #0a0a0b;
@@ -38,6 +36,12 @@
   --shadow-lg: 0 20px 60px rgba(0,0,0,0.6);
 
   --diag-opacity: 0.055;
+
+  /* ── Setup accent (default: lime) ── */
+  --setup-accent: #CFFA7C;
+  --setup-accent2: #9CE89D;
+  --setup-accent-glow: rgba(207,250,124,0.25);
+  --setup-accent-fg: #0a0a0b;
 }
 
 /* ── LIGHT MODE ── */
@@ -74,6 +78,56 @@
   --diag-opacity: 0.04;
 }
 
+/* ── PALETA DE COLORES DE SETUP ── */
+[data-setup-color="lime"] {
+  --setup-accent: #CFFA7C;
+  --setup-accent2: #9CE89D;
+  --setup-accent-glow: rgba(207,250,124,0.25);
+  --setup-accent-fg: #0a0a0b;
+}
+[data-setup-color="blue"] {
+  --setup-accent: #60a5fa;
+  --setup-accent2: #818cf8;
+  --setup-accent-glow: rgba(96,165,250,0.25);
+  --setup-accent-fg: #0a0a0b;
+}
+[data-setup-color="purple"] {
+  --setup-accent: #c084fc;
+  --setup-accent2: #a855f7;
+  --setup-accent-glow: rgba(192,132,252,0.25);
+  --setup-accent-fg: #0a0a0b;
+}
+[data-setup-color="pink"] {
+  --setup-accent: #f472b6;
+  --setup-accent2: #fb7185;
+  --setup-accent-glow: rgba(244,114,182,0.25);
+  --setup-accent-fg: #0a0a0b;
+}
+[data-setup-color="orange"] {
+  --setup-accent: #fb923c;
+  --setup-accent2: #fbbf24;
+  --setup-accent-glow: rgba(251,146,60,0.25);
+  --setup-accent-fg: #0a0a0b;
+}
+[data-setup-color="red"] {
+  --setup-accent: #f87171;
+  --setup-accent2: #ef4444;
+  --setup-accent-glow: rgba(248,113,113,0.25);
+  --setup-accent-fg: #0a0a0b;
+}
+[data-setup-color="cyan"] {
+  --setup-accent: #22d3ee;
+  --setup-accent2: #38bdf8;
+  --setup-accent-glow: rgba(34,211,238,0.25);
+  --setup-accent-fg: #0a0a0b;
+}
+[data-setup-color="yellow"] {
+  --setup-accent: #fde047;
+  --setup-accent2: #facc15;
+  --setup-accent-glow: rgba(253,224,71,0.25);
+  --setup-accent-fg: #0a0a0b;
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 
@@ -86,9 +140,6 @@ body {
   transition: background 0.3s, color 0.3s;
 }
 
-/* ── No static background pattern — using animated canvas instead ── */
-
-
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
@@ -99,8 +150,8 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, #CFFA7C, #9CE89D);
-  color: #0a0a0b;
+  background: linear-gradient(135deg, var(--setup-accent), var(--setup-accent2));
+  color: var(--setup-accent-fg);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 14px;
@@ -110,12 +161,12 @@ body {
   border: none;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 0 20px rgba(207,250,124,0.3);
+  box-shadow: 0 0 20px var(--setup-accent-glow);
   text-decoration: none;
 }
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(207,250,124,0.4);
+  box-shadow: 0 6px 28px var(--setup-accent-glow);
 }
 .btn-primary:active { transform: translateY(0); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
