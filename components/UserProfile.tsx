@@ -11,6 +11,16 @@ const AVATAR_GRADIENTS = [
   ['#60a5fa','#3b82f6'], ['#f472b6','#ec4899'],
 ]
 
+const TAGS = ['Gamer', 'Streamer', 'Developer', 'Content Creator']
+
+const TAG_STYLES: Record<string, { bg: string; border: string; color: string }> = {
+  'Founder':         { bg: 'rgba(255,200,50,0.15)',  border: 'rgba(255,200,50,0.4)',  color: '#ffc832' },
+  'Gamer':           { bg: 'rgba(207,250,124,0.12)', border: 'rgba(207,250,124,0.3)', color: '#b8e86a' },
+  'Streamer':        { bg: 'rgba(168,85,247,0.12)',  border: 'rgba(168,85,247,0.3)',  color: '#c084fc' },
+  'Developer':       { bg: 'rgba(56,189,248,0.12)',  border: 'rgba(56,189,248,0.3)',  color: '#38bdf8' },
+  'Content Creator': { bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.3)',  color: '#fb923c' },
+}
+
 function hashStr(str: string) {
   let h = 0
   for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0
@@ -66,6 +76,25 @@ function CategoryPill({ type, category }: { type: string; category?: string }) {
   )
 }
 
+function ProfileTag({ tag }: { tag: string }) {
+  const style = TAG_STYLES[tag] || TAG_STYLES['Gamer']
+  const isFounder = tag === 'Founder'
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      fontSize: 11, fontWeight: 700,
+      background: style.bg,
+      border: `1px solid ${style.border}`,
+      color: style.color,
+      padding: '2px 10px', borderRadius: 50, whiteSpace: 'nowrap',
+      boxShadow: isFounder ? `0 0 8px ${style.border}` : 'none',
+      letterSpacing: '0.3px',
+    }}>
+      {isFounder && '★ '}{tag}
+    </span>
+  )
+}
+
 function ComponentTabs({ peripherals, internals }: { peripherals: Component[]; internals: Component[] }) {
   const [activeTab, setActiveTab] = useState<'peripherals' | 'internals'>(
     peripherals.length > 0 ? 'peripherals' : 'internals'
@@ -76,17 +105,14 @@ function ComponentTabs({ peripherals, internals }: { peripherals: Component[]; i
     <div style={{ marginBottom: 32 }}>
       <div style={{ display: 'flex', gap: 2, marginBottom: 16, background: 'var(--surface2)', borderRadius: 'var(--radius-sm)', padding: 4, width: 'fit-content' }}>
         {peripherals.length > 0 && (
-          <button
-            onClick={() => setActiveTab('peripherals')}
-            style={{
-              padding: '7px 18px', borderRadius: 'var(--radius-sm)',
-              background: activeTab === 'peripherals' ? 'var(--surface)' : 'transparent',
-              border: activeTab === 'peripherals' ? '1px solid var(--border)' : '1px solid transparent',
-              color: activeTab === 'peripherals' ? 'var(--text)' : 'var(--text-muted)',
-              fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-              cursor: 'pointer', transition: 'all 0.18s',
-            }}
-          >
+          <button onClick={() => setActiveTab('peripherals')} style={{
+            padding: '7px 18px', borderRadius: 'var(--radius-sm)',
+            background: activeTab === 'peripherals' ? 'var(--surface)' : 'transparent',
+            border: activeTab === 'peripherals' ? '1px solid var(--border)' : '1px solid transparent',
+            color: activeTab === 'peripherals' ? 'var(--text)' : 'var(--text-muted)',
+            fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
+            cursor: 'pointer', transition: 'all 0.18s',
+          }}>
             Periféricos
             <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'peripherals' ? '#b8e86a' : 'var(--text-dim)' }}>
               {peripherals.length}
@@ -94,17 +120,14 @@ function ComponentTabs({ peripherals, internals }: { peripherals: Component[]; i
           </button>
         )}
         {internals.length > 0 && (
-          <button
-            onClick={() => setActiveTab('internals')}
-            style={{
-              padding: '7px 18px', borderRadius: 'var(--radius-sm)',
-              background: activeTab === 'internals' ? 'var(--surface)' : 'transparent',
-              border: activeTab === 'internals' ? '1px solid var(--border)' : '1px solid transparent',
-              color: activeTab === 'internals' ? 'var(--text)' : 'var(--text-muted)',
-              fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-              cursor: 'pointer', transition: 'all 0.18s',
-            }}
-          >
+          <button onClick={() => setActiveTab('internals')} style={{
+            padding: '7px 18px', borderRadius: 'var(--radius-sm)',
+            background: activeTab === 'internals' ? 'var(--surface)' : 'transparent',
+            border: activeTab === 'internals' ? '1px solid var(--border)' : '1px solid transparent',
+            color: activeTab === 'internals' ? 'var(--text)' : 'var(--text-muted)',
+            fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
+            cursor: 'pointer', transition: 'all 0.18s',
+          }}>
             Internos
             <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'internals' ? '#b8e86a' : 'var(--text-dim)' }}>
               {internals.length}
@@ -153,6 +176,10 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [saving, setSaving] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
+  const [profileTag, setProfileTag] = useState<string | null>(null)
+  const [editTag, setEditTag] = useState<string>('')
+  const [savingTag, setSavingTag] = useState(false)
+
   const [likes, setLikes] = useState<Record<string, number>>({})
   const [liked, setLiked] = useState<Record<string, boolean>>({})
   const [likingLoading, setLikingLoading] = useState<Record<string, boolean>>({})
@@ -200,6 +227,12 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     initialSetups.forEach(s => { initialLikes[s.id] = s.likes || 0 })
     setLikes(initialLikes)
 
+    // Cargar tag del perfil
+    supabase.from('profiles').select('tag').eq('username', username).single()
+      .then(({ data }) => {
+        if (data?.tag) setProfileTag(data.tag)
+      })
+
     const onNewSetup = (e: Event) => {
       const setup = (e as CustomEvent).detail
       setSetups(prev => [setup, ...prev])
@@ -207,6 +240,16 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     document.addEventListener('stationly:new-setup', onNewSetup)
     return () => document.removeEventListener('stationly:new-setup', onNewSetup)
   }, [username, initialSetups])
+
+  async function saveTag() {
+    if (!editTag) return
+    setSavingTag(true)
+    try {
+      await supabase.from('profiles').upsert({ username, tag: editTag }, { onConflict: 'username' })
+      setProfileTag(editTag)
+    } catch {}
+    setSavingTag(false)
+  }
 
   async function toggleLike(setupId: string) {
     if (likingLoading[setupId]) return
@@ -255,6 +298,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setScanResults([])
     setScanDone(false)
     setShowAdvanced(false)
+    setEditTag(profileTag || '')
     setEditing(true)
   }
 
@@ -392,13 +436,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   async function saveChanges() {
     if (scanResults.length > 0) {
       const confirm = window.confirm(`Tienes ${scanResults.length} componente${scanResults.length !== 1 ? 's' : ''} detectado${scanResults.length !== 1 ? 's' : ''} sin confirmar. ¿Quieres añadirlos todos antes de guardar?`)
-      if (confirm) {
-        acceptAll()
-        return
-      }
+      if (confirm) { acceptAll(); return }
     }
     setSaving(true)
     try {
+      // Guardar tag si cambió
+      if (editTag && editTag !== profileTag) await saveTag()
+
       let image_url = setup.image_url
       if (newImageFile && newImagePreview) {
         const res = await fetch(newImagePreview)
@@ -489,7 +533,10 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
           {username.slice(0, 2).toUpperCase()}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4 }}>{username}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', margin: 0 }}>{username}</h1>
+            {profileTag && <ProfileTag tag={profileTag} />}
+          </div>
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
             {[
               { num: setups.length, label: setups.length === 1 ? 'Setup' : 'Setups' },
@@ -533,6 +580,36 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       {editing && isOwner && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--accent)', borderRadius: 'var(--radius)', padding: 28, marginBottom: 28 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>✏️ Editando: {setup.title}</h2>
+
+          {/* Tag */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Tu tag</label>
+            {profileTag === 'Founder' ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <ProfileTag tag="Founder" />
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>El tag Founder no se puede cambiar</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {TAGS.map(t => (
+                  <button key={t} onClick={() => setEditTag(t)} style={{
+                    padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                    background: editTag === t ? TAG_STYLES[t].bg : 'var(--surface2)',
+                    border: `1px solid ${editTag === t ? TAG_STYLES[t].border : 'var(--border)'}`,
+                    color: editTag === t ? TAG_STYLES[t].color : 'var(--text-muted)',
+                    transition: 'all 0.18s',
+                  }}>
+                    {t}
+                  </button>
+                ))}
+                {editTag && (
+                  <button onClick={() => setEditTag('')} style={{ padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>
+                    Sin tag
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Título */}
           <div style={{ marginBottom: 20 }}>
