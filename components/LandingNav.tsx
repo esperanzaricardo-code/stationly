@@ -33,7 +33,7 @@ export default function LandingNav() {
 
 useEffect(() => {
     try {
-      const stored = localStorage.getItem('stationly-app-color') || 'lime'
+      const stored = 'lime'
     if (stored) {
       const map: Record<string, { accent: string; accent2: string; glow: string }> = {
         lime:   { accent: '#CFFA7C', accent2: '#9CE89D', glow: 'rgba(207,250,124,0.25)' },
