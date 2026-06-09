@@ -68,7 +68,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'El título es obligatorio' }, { status: 400 })
     }
 
-    // Convertir tags de string[] a Component[]
     const rawTags: string[] = tagsRaw ? JSON.parse(tagsRaw) : []
     const tags = rawTags.map((name: string) => ({
       name,
@@ -139,7 +138,6 @@ export async function PUT(req: NextRequest) {
 
     const userName = user.user_metadata?.username || user.email?.split('@')[0] || 'usuario'
 
-    // Verificar que el setup pertenece al usuario
     const { data: existing } = await supabase
       .from('setups').select('user_name').eq('id', setupId).single()
 
@@ -155,6 +153,40 @@ export async function PUT(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json(data)
+
+  } catch (err) {
+    console.error(err)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { setupId, sessionToken } = await req.json()
+
+    if (!sessionToken) {
+      return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 })
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(sessionToken)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 })
+    }
+
+    const userName = user.user_metadata?.username || user.email?.split('@')[0] || 'usuario'
+
+    const { data: existing } = await supabase
+      .from('setups').select('user_name').eq('id', setupId).single()
+
+    if (!existing || existing.user_name.toLowerCase() !== userName.toLowerCase()) {
+      return NextResponse.json({ error: 'No tienes permiso para eliminar este setup' }, { status: 403 })
+    }
+
+    const { error } = await supabase
+      .from('setups').delete().eq('id', setupId)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true })
 
   } catch (err) {
     console.error(err)
