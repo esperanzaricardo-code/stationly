@@ -293,6 +293,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     root.style.setProperty('--accent2', c.accent2)
     root.style.setProperty('--accent-glow', c.glow)
     root.style.setProperty('--tag-text', c.accent)
+    root.style.setProperty('--tag-bg', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.1)`)
+    root.style.setProperty('--tag-border', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.3)`)
   }
 
   async function saveProfile() {
