@@ -61,8 +61,9 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
       const user = data.session?.user
       if (user) {
         setLoggedIn(true)
-        setUsername(user.user_metadata?.username || user.email?.split('@')[0] || '')
-        supabase.from('profiles').select('app_accent_color').eq('username', user.user_metadata?.username || user.email?.split('@')[0] || '').single()
+        const uname = user.user_metadata?.username || user.email?.split('@')[0] || ''
+        setUsername(uname)
+        supabase.from('profiles').select('app_accent_color').eq('username', uname).single()
           .then(({ data: profile }) => {
             if (profile?.app_accent_color) {
               const color = profile.app_accent_color as AccentColor
@@ -93,6 +94,14 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
     if (loggedIn && username) {
       await supabase.from('profiles').upsert({ username, app_accent_color: color }, { onConflict: 'username' })
     }
+  }
+
+  function handleLogout() {
+    setMenuOpen(false)
+    setStoredAppColor('lime')
+    applyAppColor('lime')
+    setAppColor('lime')
+    supabase.auth.signOut().then(() => router.push('/'))
   }
 
   function handleUpload() {
@@ -136,81 +145,84 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
         <div className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
 
           {/* Toggle tema — solo no registrados */}
-{!loggedIn && (
-  <button onClick={toggle} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} style={{
-    background: 'var(--surface2)', border: '1px solid var(--border)',
-    color: 'var(--text-muted)', width: 38, height: 38, borderRadius: '50%',
-    fontSize: 16, cursor: 'pointer', display: 'flex',
-    alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
-  }}>
-    {theme === 'dark' ? '☀️' : '🌙'}
-  </button>
-)}
-
-{/* Botón ajustes — solo registrados */}
-{loggedIn && <div style={{ position: 'relative' }}>
-            <button onClick={() => setSettingsOpen(o => !o)} title="Ajustes de apariencia" style={{
-              background: settingsOpen ? 'var(--surface3)' : 'var(--surface2)',
-              border: '1px solid var(--border)',
+          {!loggedIn && (
+            <button onClick={toggle} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} style={{
+              background: 'var(--surface2)', border: '1px solid var(--border)',
               color: 'var(--text-muted)', width: 38, height: 38, borderRadius: '50%',
               fontSize: 16, cursor: 'pointer', display: 'flex',
               alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
             }}>
-              ⚙️
+              {theme === 'dark' ? '☀️' : '🌙'}
             </button>
+          )}
 
-            {settingsOpen && (
-              <div style={{
-                position: 'absolute', top: 46, right: 0,
-                background: 'var(--surface)', border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)', padding: 20,
-                minWidth: 240, boxShadow: 'var(--shadow-lg)', zIndex: 200,
+          {/* Botón ajustes — solo registrados */}
+          {loggedIn && (
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setSettingsOpen(o => !o)} title="Ajustes de apariencia" style={{
+                background: settingsOpen ? 'var(--surface3)' : 'var(--surface2)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-muted)', width: 38, height: 38, borderRadius: '50%',
+                fontSize: 16, cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
               }}>
-                {/* Tema */}
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Tema</div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {(['dark', 'light'] as const).map(t => (
-                      <button key={t} onClick={toggle} style={{
-                        flex: 1, padding: '8px', borderRadius: 'var(--radius-sm)',
-                        background: theme === t ? 'var(--surface3)' : 'var(--surface2)',
-                        border: `1px solid ${theme === t ? 'var(--accent)' : 'var(--border)'}`,
-                        color: theme === t ? 'var(--text)' : 'var(--text-muted)',
-                        fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
-                        cursor: 'pointer', transition: 'all 0.18s',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      }}>
-                        {t === 'dark' ? '🌙 Oscuro' : '☀️ Claro'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                ⚙️
+              </button>
 
-                {/* Color */}
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color</div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {ACCENT_COLORS.map(color => (
-                      <button key={color.id} onClick={() => changeAppColor(color.id)} title={color.label}
-                        style={{
-                          width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', border: 'none',
-                          background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
-                          outline: appColor === color.id ? `3px solid ${color.from}` : '3px solid transparent',
-                          outlineOffset: 2,
-                          boxShadow: appColor === color.id ? `0 0 10px ${color.from}88` : 'none',
-                          transition: 'all 0.18s',
-                        }}
-                      />
-                    ))}
+              {settingsOpen && (
+                <div style={{
+                  position: 'absolute', top: 46, right: 0,
+                  background: 'var(--surface)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)', padding: 20,
+                  minWidth: 240, boxShadow: 'var(--shadow-lg)', zIndex: 200,
+                }}>
+                  {/* Tema */}
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Tema</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {(['dark', 'light'] as const).map(t => (
+                        <button key={t} onClick={toggle} style={{
+                          flex: 1, padding: '8px', borderRadius: 'var(--radius-sm)',
+                          background: theme === t ? 'var(--surface3)' : 'var(--surface2)',
+                          border: `1px solid ${theme === t ? 'var(--accent)' : 'var(--border)'}`,
+                          color: theme === t ? 'var(--text)' : 'var(--text-muted)',
+                          fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
+                          cursor: 'pointer', transition: 'all 0.18s',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        }}>
+                          {t === 'dark' ? '🌙 Oscuro' : '☀️ Claro'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  {isProfilePage && (
-                    <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 10, lineHeight: 1.5 }}>
-                      En perfiles ajenos se muestra el color elegido por su dueño.
-                    </p>
-                  )}
+
+                  {/* Color */}
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color</div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {ACCENT_COLORS.map(color => (
+                        <button key={color.id} onClick={() => changeAppColor(color.id)} title={color.label}
+                          style={{
+                            width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', border: 'none',
+                            background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
+                            outline: appColor === color.id ? `3px solid ${color.from}` : '3px solid transparent',
+                            outlineOffset: 2,
+                            boxShadow: appColor === color.id ? `0 0 10px ${color.from}88` : 'none',
+                            transition: 'all 0.18s',
+                          }}
+                        />
+                      ))}
+                    </div>
+                    {isProfilePage && (
+                      <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 10, lineHeight: 1.5 }}>
+                        En perfiles ajenos se muestra el color elegido por su dueño.
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
-            </div>}
+            </div>
+          )}
 
           {loggedIn ? (
             <>
@@ -233,7 +245,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
                   {username}
                 </span>
               </Link>
-              <button onClick={() => supabase.auth.signOut().then(() => router.push('/'))} className="btn-secondary" style={{ fontSize: 13 }}>
+              <button onClick={handleLogout} className="btn-secondary" style={{ fontSize: 13 }}>
                 Salir
               </button>
             </>
@@ -297,24 +309,26 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
             </div>
           </div>
 
-          {/* Color */}
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8 }}>Color</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {ACCENT_COLORS.map(color => (
-                <button key={color.id} onClick={() => { changeAppColor(color.id) }} title={color.label}
-                  style={{
-                    width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', border: 'none',
-                    background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
-                    outline: appColor === color.id ? `3px solid ${color.from}` : '3px solid transparent',
-                    outlineOffset: 2,
-                    boxShadow: appColor === color.id ? `0 0 10px ${color.from}88` : 'none',
-                    transition: 'all 0.18s',
-                  }}
-                />
-              ))}
+          {/* Color — solo registrados */}
+          {loggedIn && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8 }}>Color</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {ACCENT_COLORS.map(color => (
+                  <button key={color.id} onClick={() => changeAppColor(color.id)} title={color.label}
+                    style={{
+                      width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', border: 'none',
+                      background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
+                      outline: appColor === color.id ? `3px solid ${color.from}` : '3px solid transparent',
+                      outlineOffset: 2,
+                      boxShadow: appColor === color.id ? `0 0 10px ${color.from}88` : 'none',
+                      transition: 'all 0.18s',
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {loggedIn ? (
             <>
@@ -340,7 +354,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
               <button onClick={handleUpload} className="btn-primary" style={{ fontSize: 14, padding: '12px', width: '100%' }}>
                 📸 Subir Setup
               </button>
-              <button onClick={() => { setMenuOpen(false); supabase.auth.signOut().then(() => { setStoredAppColor('lime'); applyAppColor('lime'); setAppColor('lime'); router.push('/') }) }} className="btn-secondary" style={{ fontSize: 14, padding: '12px', width: '100%' }}>
+              <button onClick={handleLogout} className="btn-secondary" style={{ fontSize: 14, padding: '12px', width: '100%' }}>
                 Salir
               </button>
             </>
