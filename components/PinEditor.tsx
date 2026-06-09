@@ -29,6 +29,7 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, components
   const [scanError, setScanError] = useState('')
   const [suggestions, setSuggestions] = useState<Record<number, string>>({})
   const [pendingPin, setPendingPin] = useState<{ x: number; y: number } | null>(null)
+const [pendingSearch, setPendingSearch] = useState('')
   const [hoveredPin, setHoveredPin] = useState<number | null>(null)
   const imageRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -55,6 +56,7 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, components
     onChange([...pins, newPin])
     setActivePin(newPin.id)
     setPendingPin(null)
+setPendingSearch('')
   }
 
   function updatePinName(id: number, name: string) {
