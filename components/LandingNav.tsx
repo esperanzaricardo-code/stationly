@@ -31,31 +31,26 @@ export default function LandingNav() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-useEffect(() => {
+  // ── La landing siempre es verde lima ──
+  // Resetea TODAS las variables de color (incluidas las de setup) por si
+  // el usuario viene de un perfil y los colores se quedaron "pegados".
+  useEffect(() => {
     try {
-      const stored = 'lime'
-    if (stored) {
-      const map: Record<string, { accent: string; accent2: string; glow: string }> = {
-        lime:   { accent: '#CFFA7C', accent2: '#9CE89D', glow: 'rgba(207,250,124,0.25)' },
-        blue:   { accent: '#60a5fa', accent2: '#818cf8', glow: 'rgba(96,165,250,0.25)' },
-        purple: { accent: '#c084fc', accent2: '#a855f7', glow: 'rgba(192,132,252,0.25)' },
-        pink:   { accent: '#f472b6', accent2: '#fb7185', glow: 'rgba(244,114,182,0.25)' },
-        orange: { accent: '#fb923c', accent2: '#fbbf24', glow: 'rgba(251,146,60,0.25)' },
-        red:    { accent: '#f87171', accent2: '#ef4444', glow: 'rgba(248,113,113,0.25)' },
-        cyan:   { accent: '#22d3ee', accent2: '#38bdf8', glow: 'rgba(34,211,238,0.25)' },
-        yellow: { accent: '#fde047', accent2: '#facc15', glow: 'rgba(253,224,71,0.25)' },
-      }
-      const c = map[stored] || map.lime
+      const accent = '#CFFA7C'
+      const accent2 = '#9CE89D'
+      const glow = 'rgba(207,250,124,0.25)'
       const root = document.documentElement
-      root.style.setProperty('--accent', c.accent)
-      root.style.setProperty('--accent2', c.accent2)
-      root.style.setProperty('--accent-glow', c.glow)
-      root.style.setProperty('--tag-bg', `rgba(${c.glow.slice(5,-1).split(',').slice(0,3).join(',')},0.1)`)
-      root.style.setProperty('--tag-border', `rgba(${c.glow.slice(5,-1).split(',').slice(0,3).join(',')},0.3)`)
-      root.style.setProperty('--tag-text', c.accent)
-    }
-  } catch {}
-}, [])
+      root.style.setProperty('--accent', accent)
+      root.style.setProperty('--accent2', accent2)
+      root.style.setProperty('--accent-glow', glow)
+      root.style.setProperty('--setup-accent', accent)
+      root.style.setProperty('--setup-accent2', accent2)
+      root.style.setProperty('--setup-accent-glow', glow)
+      root.style.setProperty('--tag-bg', 'rgba(207,250,124,0.1)')
+      root.style.setProperty('--tag-border', 'rgba(207,250,124,0.3)')
+      root.style.setProperty('--tag-text', accent)
+    } catch {}
+  }, [])
 
   return (
     <>
