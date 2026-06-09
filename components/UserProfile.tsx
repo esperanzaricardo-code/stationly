@@ -6,12 +6,6 @@ import { supabase } from '@/lib/supabase'
 import PinEditor from './PinEditor'
 import ImageCropper from './ImageCropper'
 
-const AVATAR_GRADIENTS = [
-  ['#CFFA7C','#9CE89D'], ['#f43f5e','#fb923c'], ['#06b6d4','#6366f1'],
-  ['#34d399','#059669'], ['#fbbf24','#f59e0b'], ['#9CE89D','#CFFA7C'],
-  ['#60a5fa','#3b82f6'], ['#f472b6','#ec4899'],
-]
-
 const TAGS = ['Gamer', 'Streamer', 'Developer', 'Content Creator']
 
 const TAG_STYLES: Record<string, { bg: string; border: string; color: string }> = {
@@ -41,12 +35,8 @@ function makeDefaultLink(component: string, shop: string, affiliateId?: string) 
 }
 
 function generateLinks(name: string, showPcComponentes: boolean, affiliateId?: string): ShopLink[] {
-  const links: ShopLink[] = [
-    { shop: 'Amazon', url: makeDefaultLink(name, 'Amazon', affiliateId) },
-  ]
-  if (showPcComponentes) {
-    links.push({ shop: 'PcComponentes', url: makeDefaultLink(name, 'PcComponentes') })
-  }
+  const links: ShopLink[] = [{ shop: 'Amazon', url: makeDefaultLink(name, 'Amazon', affiliateId) }]
+  if (showPcComponentes) links.push({ shop: 'PcComponentes', url: makeDefaultLink(name, 'PcComponentes') })
   return links
 }
 
@@ -62,17 +52,38 @@ function totalComponents(setups: Setup[]) {
   }, 0)
 }
 
+function applyAccentColor(color: AccentColor) {
+  const colorMap: Record<AccentColor, { accent: string; accent2: string; glow: string }> = {
+    lime:   { accent: '#CFFA7C', accent2: '#9CE89D', glow: 'rgba(207,250,124,0.25)' },
+    blue:   { accent: '#60a5fa', accent2: '#818cf8', glow: 'rgba(96,165,250,0.25)' },
+    purple: { accent: '#c084fc', accent2: '#a855f7', glow: 'rgba(192,132,252,0.25)' },
+    pink:   { accent: '#f472b6', accent2: '#fb7185', glow: 'rgba(244,114,182,0.25)' },
+    orange: { accent: '#fb923c', accent2: '#fbbf24', glow: 'rgba(251,146,60,0.25)' },
+    red:    { accent: '#f87171', accent2: '#ef4444', glow: 'rgba(248,113,113,0.25)' },
+    cyan:   { accent: '#22d3ee', accent2: '#38bdf8', glow: 'rgba(34,211,238,0.25)' },
+    yellow: { accent: '#fde047', accent2: '#facc15', glow: 'rgba(253,224,71,0.25)' },
+  }
+  const c = colorMap[color] || colorMap.lime
+  const root = document.documentElement
+  root.style.setProperty('--setup-accent', c.accent)
+  root.style.setProperty('--setup-accent2', c.accent2)
+  root.style.setProperty('--setup-accent-glow', c.glow)
+  root.style.setProperty('--accent', c.accent)
+  root.style.setProperty('--accent2', c.accent2)
+  root.style.setProperty('--accent-glow', c.glow)
+  root.style.setProperty('--tag-text', c.accent)
+  root.style.setProperty('--tag-bg', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.1)`)
+  root.style.setProperty('--tag-border', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.3)`)
+}
+
 function CategoryPill({ type, category }: { type: string; category?: string }) {
   const label = category || (type === 'internal' ? 'Interno' : 'Periférico')
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center',
-      fontSize: 11, fontWeight: 600,
-      background: 'var(--setup-accent-glow)',
-      border: '1px solid var(--setup-accent)',
-      color: 'var(--setup-accent)',
-      padding: '2px 8px', borderRadius: 50, flexShrink: 0, whiteSpace: 'nowrap',
-      opacity: 0.9,
+      display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 600,
+      background: 'var(--setup-accent-glow)', border: '1px solid var(--setup-accent)',
+      color: 'var(--setup-accent)', padding: '2px 8px', borderRadius: 50,
+      flexShrink: 0, whiteSpace: 'nowrap', opacity: 0.9,
     }}>
       {label}
     </span>
@@ -99,16 +110,12 @@ function ProfileTag({ tag }: { tag: string }) {
 }
 
 function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId }: {
-  peripherals: Component[]
-  internals: Component[]
-  showPcComponentes: boolean
-  affiliateId?: string
+  peripherals: Component[]; internals: Component[]; showPcComponentes: boolean; affiliateId?: string
 }) {
   const [activeTab, setActiveTab] = useState<'peripherals' | 'internals'>(
     peripherals.length > 0 ? 'peripherals' : 'internals'
   )
   const items = activeTab === 'peripherals' ? peripherals : internals
-
   return (
     <div style={{ marginBottom: 32 }}>
       <div style={{ display: 'flex', gap: 2, marginBottom: 16, background: 'var(--surface2)', borderRadius: 'var(--radius-sm)', padding: 4, width: 'fit-content' }}>
@@ -118,13 +125,10 @@ function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId 
             background: activeTab === 'peripherals' ? 'var(--surface)' : 'transparent',
             border: activeTab === 'peripherals' ? '1px solid var(--border)' : '1px solid transparent',
             color: activeTab === 'peripherals' ? 'var(--text)' : 'var(--text-muted)',
-            fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-            cursor: 'pointer', transition: 'all 0.18s',
+            fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.18s',
           }}>
             Periféricos
-            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'peripherals' ? 'var(--setup-accent)' : 'var(--text-dim)' }}>
-              {peripherals.length}
-            </span>
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'peripherals' ? 'var(--setup-accent)' : 'var(--text-dim)' }}>{peripherals.length}</span>
           </button>
         )}
         {internals.length > 0 && (
@@ -133,17 +137,13 @@ function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId 
             background: activeTab === 'internals' ? 'var(--surface)' : 'transparent',
             border: activeTab === 'internals' ? '1px solid var(--border)' : '1px solid transparent',
             color: activeTab === 'internals' ? 'var(--text)' : 'var(--text-muted)',
-            fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-            cursor: 'pointer', transition: 'all 0.18s',
+            fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.18s',
           }}>
             Internos
-            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'internals' ? 'var(--setup-accent)' : 'var(--text-dim)' }}>
-              {internals.length}
-            </span>
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'internals' ? 'var(--setup-accent)' : 'var(--text-dim)' }}>{internals.length}</span>
           </button>
         )}
       </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {items.map((comp, i) => {
           const links = comp.links?.length > 0
@@ -187,25 +187,25 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [saving, setSaving] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
+  // Modal editar perfil
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
+
+  // Datos del perfil
   const [profileTag, setProfileTag] = useState<string | null>(null)
   const [roleTag, setRoleTag] = useState<string | null>(null)
-  const [editRoleTag, setEditRoleTag] = useState<string>('')
-  const [savingTag, setSavingTag] = useState(false)
-
   const [amazonAffiliateId, setAmazonAffiliateId] = useState<string>('')
-  const [editAmazonAffiliateId, setEditAmazonAffiliateId] = useState<string>('')
   const [showPcComponentes, setShowPcComponentes] = useState(true)
+  const [appColor, setAppColor] = useState<AccentColor>('lime')
+
+  // Edición del perfil (modal)
+  const [editRoleTag, setEditRoleTag] = useState<string>('')
+  const [editAmazonAffiliateId, setEditAmazonAffiliateId] = useState<string>('')
   const [editShowPcComponentes, setEditShowPcComponentes] = useState(true)
+  const [editAppColor, setEditAppColor] = useState<AccentColor>('lime')
 
+  // Edición del setup
   const [editAccentColor, setEditAccentColor] = useState<AccentColor>('lime')
-
-  const [likes, setLikes] = useState<Record<string, number>>({})
-  const [liked, setLiked] = useState<Record<string, boolean>>({})
-  const [likingLoading, setLikingLoading] = useState<Record<string, boolean>>({})
-
-  const [reported, setReported] = useState<Record<string, boolean>>({})
-  const [showReport, setShowReport] = useState<Record<string, boolean>>({})
-
   const [editTitle, setEditTitle] = useState('')
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null)
@@ -215,7 +215,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const photoScanRef = useRef<HTMLInputElement>(null)
   const [editComponents, setEditComponents] = useState<Component[]>([])
   const [editPins, setEditPins] = useState<Pin[]>([])
-
   const [componentText, setComponentText] = useState('')
   const [scanning, setScanning] = useState(false)
   const [photoScanning, setPhotoScanning] = useState(false)
@@ -223,6 +222,12 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [scanDone, setScanDone] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editingName, setEditingName] = useState('')
+
+  const [likes, setLikes] = useState<Record<string, number>>({})
+  const [liked, setLiked] = useState<Record<string, boolean>>({})
+  const [likingLoading, setLikingLoading] = useState<Record<string, boolean>>({})
+  const [reported, setReported] = useState<Record<string, boolean>>({})
+  const [showReport, setShowReport] = useState<Record<string, boolean>>({})
 
   const setup = setups[activeSetup]
   const currentAccent = (setup?.accent_color || 'lime') as AccentColor
@@ -248,34 +253,15 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setLikes(initialLikes)
 
     const initialAccent = (initialSetups[activeSetup >= 0 ? activeSetup : 0]?.accent_color || 'lime') as AccentColor
-    const colorMap: Record<AccentColor, { accent: string; accent2: string; glow: string }> = {
-      lime:   { accent: '#CFFA7C', accent2: '#9CE89D', glow: 'rgba(207,250,124,0.25)' },
-      blue:   { accent: '#60a5fa', accent2: '#818cf8', glow: 'rgba(96,165,250,0.25)' },
-      purple: { accent: '#c084fc', accent2: '#a855f7', glow: 'rgba(192,132,252,0.25)' },
-      pink:   { accent: '#f472b6', accent2: '#fb7185', glow: 'rgba(244,114,182,0.25)' },
-      orange: { accent: '#fb923c', accent2: '#fbbf24', glow: 'rgba(251,146,60,0.25)' },
-      red:    { accent: '#f87171', accent2: '#ef4444', glow: 'rgba(248,113,113,0.25)' },
-      cyan:   { accent: '#22d3ee', accent2: '#38bdf8', glow: 'rgba(34,211,238,0.25)' },
-      yellow: { accent: '#fde047', accent2: '#facc15', glow: 'rgba(253,224,71,0.25)' },
-    }
-    const c = colorMap[initialAccent] || colorMap.lime
-    const root = document.documentElement
-    root.style.setProperty('--setup-accent', c.accent)
-    root.style.setProperty('--setup-accent2', c.accent2)
-    root.style.setProperty('--setup-accent-glow', c.glow)
-    root.style.setProperty('--accent', c.accent)
-    root.style.setProperty('--accent2', c.accent2)
-    root.style.setProperty('--accent-glow', c.glow)
-    root.style.setProperty('--tag-text', c.accent)
-    root.style.setProperty('--tag-bg', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.1)`)
-    root.style.setProperty('--tag-border', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.3)`)
+    applyAccentColor(initialAccent)
 
-    supabase.from('profiles').select('tag, role_tag, amazon_affiliate_id, show_pccomponentes').eq('username', username).single()
+    supabase.from('profiles').select('tag, role_tag, amazon_affiliate_id, show_pccomponentes, app_accent_color').eq('username', username).single()
       .then(({ data }) => {
         if (data?.tag) setProfileTag(data.tag)
         if (data?.role_tag) setRoleTag(data.role_tag)
         if (data?.amazon_affiliate_id) setAmazonAffiliateId(data.amazon_affiliate_id)
         if (data?.show_pccomponentes !== undefined) setShowPcComponentes(data.show_pccomponentes)
+        if (data?.app_accent_color) setAppColor(data.app_accent_color as AccentColor)
       })
 
     const onNewSetup = (e: Event) => {
@@ -291,32 +277,19 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setEditing(false)
     const setupId = setups[index].id
     router.replace(`/u/${encodeURIComponent(username)}?setup=${setupId}`, { scroll: false })
-    const newAccent = (setups[index].accent_color || 'lime') as AccentColor
-    const colorMap: Record<AccentColor, { accent: string; accent2: string; glow: string }> = {
-      lime:   { accent: '#CFFA7C', accent2: '#9CE89D', glow: 'rgba(207,250,124,0.25)' },
-      blue:   { accent: '#60a5fa', accent2: '#818cf8', glow: 'rgba(96,165,250,0.25)' },
-      purple: { accent: '#c084fc', accent2: '#a855f7', glow: 'rgba(192,132,252,0.25)' },
-      pink:   { accent: '#f472b6', accent2: '#fb7185', glow: 'rgba(244,114,182,0.25)' },
-      orange: { accent: '#fb923c', accent2: '#fbbf24', glow: 'rgba(251,146,60,0.25)' },
-      red:    { accent: '#f87171', accent2: '#ef4444', glow: 'rgba(248,113,113,0.25)' },
-      cyan:   { accent: '#22d3ee', accent2: '#38bdf8', glow: 'rgba(34,211,238,0.25)' },
-      yellow: { accent: '#fde047', accent2: '#facc15', glow: 'rgba(253,224,71,0.25)' },
-    }
-    const c = colorMap[newAccent] || colorMap.lime
-    const root = document.documentElement
-    root.style.setProperty('--setup-accent', c.accent)
-    root.style.setProperty('--setup-accent2', c.accent2)
-    root.style.setProperty('--setup-accent-glow', c.glow)
-    root.style.setProperty('--accent', c.accent)
-    root.style.setProperty('--accent2', c.accent2)
-    root.style.setProperty('--accent-glow', c.glow)
-    root.style.setProperty('--tag-text', c.accent)
-    root.style.setProperty('--tag-bg', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.1)`)
-    root.style.setProperty('--tag-border', `rgba(${c.glow.slice(5, -1).split(',').slice(0,3).join(',')},0.3)`)
+    applyAccentColor((setups[index].accent_color || 'lime') as AccentColor)
   }
 
-  async function saveProfile() {
-    setSavingTag(true)
+  function openProfileModal() {
+    setEditRoleTag(roleTag || '')
+    setEditAmazonAffiliateId(amazonAffiliateId || '')
+    setEditShowPcComponentes(showPcComponentes)
+    setEditAppColor(appColor)
+    setShowProfileModal(true)
+  }
+
+  async function saveProfileModal() {
+    setSavingProfile(true)
     try {
       await supabase.from('profiles').upsert({
         username,
@@ -324,12 +297,18 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         role_tag: editRoleTag || null,
         amazon_affiliate_id: editAmazonAffiliateId || null,
         show_pccomponentes: editShowPcComponentes,
+        app_accent_color: editAppColor,
       }, { onConflict: 'username' })
       setRoleTag(editRoleTag)
       setAmazonAffiliateId(editAmazonAffiliateId)
       setShowPcComponentes(editShowPcComponentes)
+      setAppColor(editAppColor)
+      try {
+        localStorage.setItem('stationly-app-color', editAppColor)
+      } catch {}
+      setShowProfileModal(false)
     } catch {}
-    setSavingTag(false)
+    setSavingProfile(false)
   }
 
   async function toggleLike(setupId: string) {
@@ -379,9 +358,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setScanResults([])
     setScanDone(false)
     setShowAdvanced(false)
-    setEditRoleTag(roleTag || '')
-    setEditAmazonAffiliateId(amazonAffiliateId || '')
-    setEditShowPcComponentes(showPcComponentes)
     setEditAccentColor((setup.accent_color || 'lime') as AccentColor)
     setEditing(true)
   }
@@ -403,46 +379,23 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     if (file.size > 10 * 1024 * 1024) { alert('Máximo 10MB'); return }
     setNewImageFile(file)
     const reader = new FileReader()
-    reader.onload = e => {
-      setRawImagePreview(e.target?.result as string)
-      setShowCropper(true)
-    }
+    reader.onload = e => { setRawImagePreview(e.target?.result as string); setShowCropper(true) }
     reader.readAsDataURL(file)
   }
 
-  function handleCropDone(dataUrl: string) {
-    setNewImagePreview(dataUrl)
-    setRawImagePreview(null)
-    setShowCropper(false)
-  }
-
-  function handleCropCancel() {
-    setRawImagePreview(null)
-    setNewImageFile(null)
-    setShowCropper(false)
-    if (fileRef.current) fileRef.current.value = ''
-  }
+  function handleCropDone(dataUrl: string) { setNewImagePreview(dataUrl); setRawImagePreview(null); setShowCropper(false) }
+  function handleCropCancel() { setRawImagePreview(null); setNewImageFile(null); setShowCropper(false); if (fileRef.current) fileRef.current.value = '' }
 
   async function scanComponents() {
     if (!componentText.trim()) return
-    setScanning(true)
-    setScanResults([])
-    setScanDone(false)
+    setScanning(true); setScanResults([]); setScanDone(false)
     try {
-      const res = await fetch('/api/components', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: componentText }),
-      })
+      const res = await fetch('/api/components', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: componentText }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setScanResults(data.components)
-      setScanDone(true)
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Error al analizar')
-    } finally {
-      setScanning(false)
-    }
+      setScanResults(data.components); setScanDone(true)
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error al analizar') }
+    finally { setScanning(false) }
   }
 
   async function scanComponentPhoto(file: File) {
@@ -453,101 +406,65 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         const dataUrl = e.target?.result as string
         const base64 = dataUrl.split(',')[1]
         const mediaType = dataUrl.split(';')[0].split(':')[1]
-        const res = await fetch('/api/components', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64, mediaType }),
-        })
+        const res = await fetch('/api/components', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64: base64, mediaType }) })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
-        setScanResults(prev => [...prev, ...data.components])
-        setScanDone(true)
-        setPhotoScanning(false)
+        setScanResults(prev => [...prev, ...data.components]); setScanDone(true); setPhotoScanning(false)
       }
       reader.readAsDataURL(file)
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Error al identificar')
-      setPhotoScanning(false)
-    }
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error al identificar'); setPhotoScanning(false) }
   }
 
   function acceptComponent(comp: Component) {
     const withLinks = { ...comp, links: generateLinks(comp.name, showPcComponentes, amazonAffiliateId), confident: undefined, did_you_mean: undefined, unknown: undefined }
-    setEditComponents(prev => [...prev, withLinks])
-    setScanResults(prev => prev.filter(c => c.name !== comp.name))
+    setEditComponents(prev => [...prev, withLinks]); setScanResults(prev => prev.filter(c => c.name !== comp.name))
   }
 
   function acceptSuggestion(comp: Component) {
     const name = comp.did_you_mean || comp.name
     const withLinks = { name, type: comp.type, category: comp.category, links: generateLinks(name, showPcComponentes, amazonAffiliateId) }
-    setEditComponents(prev => [...prev, withLinks])
-    setScanResults(prev => prev.filter(c => c.name !== comp.name))
+    setEditComponents(prev => [...prev, withLinks]); setScanResults(prev => prev.filter(c => c.name !== comp.name))
   }
 
-  function rejectComponent(comp: Component) {
-    setScanResults(prev => prev.filter(c => c.name !== comp.name))
-  }
+  function rejectComponent(comp: Component) { setScanResults(prev => prev.filter(c => c.name !== comp.name)) }
 
   function acceptAll() {
     const accepted = scanResults.map(comp => {
       const name = comp.did_you_mean || comp.name
       return { name, type: comp.type, category: comp.category, links: generateLinks(name, showPcComponentes, amazonAffiliateId) }
     })
-    setEditComponents(prev => [...prev, ...accepted])
-    setScanResults([])
+    setEditComponents(prev => [...prev, ...accepted]); setScanResults([])
   }
 
-  function updateScanResultName(index: number, name: string) {
-    setScanResults(prev => prev.map((c, i) => i === index ? { ...c, name } : c))
-  }
-
-  function removeComponent(i: number) {
-    setEditComponents(prev => prev.filter((_, j) => j !== i))
-  }
-
-  function startEditingComponent(i: number, name: string) {
-    setEditingIndex(i)
-    setEditingName(name)
-  }
-
+  function updateScanResultName(index: number, name: string) { setScanResults(prev => prev.map((c, i) => i === index ? { ...c, name } : c)) }
+  function removeComponent(i: number) { setEditComponents(prev => prev.filter((_, j) => j !== i)) }
+  function startEditingComponent(i: number, name: string) { setEditingIndex(i); setEditingName(name) }
   function confirmEditingComponent() {
     if (editingIndex === null) return
     setEditComponents(prev => prev.map((c, i) => i === editingIndex ? { ...c, name: editingName, links: generateLinks(editingName, showPcComponentes, amazonAffiliateId) } : c))
-    setEditingIndex(null)
-    setEditingName('')
+    setEditingIndex(null); setEditingName('')
   }
 
   async function deleteSetup() {
     if (!window.confirm('¿Seguro que quieres eliminar este setup? Esta acción no se puede deshacer.')) return
     setSaving(true)
     try {
-      const res = await fetch('/api/setups', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ setupId: setup.id, sessionToken }),
-      })
+      const res = await fetch('/api/setups', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ setupId: setup.id, sessionToken }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       const newSetups = setups.filter(s => s.id !== setup.id)
-      setSetups(newSetups)
-      setActiveSetup(0)
-      setEditing(false)
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Error al eliminar')
-    } finally {
-      setSaving(false)
-    }
+      setSetups(newSetups); setActiveSetup(0); setEditing(false)
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error al eliminar') }
+    finally { setSaving(false) }
   }
 
   async function saveChanges() {
     if (scanResults.length > 0) {
-      const confirm = window.confirm(`Tienes ${scanResults.length} componente${scanResults.length !== 1 ? 's' : ''} detectado${scanResults.length !== 1 ? 's' : ''} sin confirmar. ¿Quieres añadirlos todos antes de guardar?`)
+      const confirm = window.confirm(`Tienes ${scanResults.length} componente${scanResults.length !== 1 ? 's' : ''} sin confirmar. ¿Añadirlos todos?`)
       if (confirm) { acceptAll(); return }
     }
     setSaving(true)
     try {
-      await saveProfile()
-
       let image_url = setup.image_url
       if (newImageFile && newImagePreview) {
         const res = await fetch(newImagePreview)
@@ -556,8 +473,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
         const arrayBuffer = await blob.arrayBuffer()
         const buffer = new Uint8Array(arrayBuffer)
-        const { error: uploadError } = await supabase.storage
-          .from('setups').upload(filename, buffer, { contentType: 'image/jpeg', upsert: false })
+        const { error: uploadError } = await supabase.storage.from('setups').upload(filename, buffer, { contentType: 'image/jpeg', upsert: false })
         if (!uploadError) {
           const { data: urlData } = supabase.storage.from('setups').getPublicUrl(filename)
           image_url = urlData.publicUrl
@@ -570,32 +486,17 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         image_url,
         accent_color: editAccentColor,
       }
-      const res = await fetch('/api/setups', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ setupId: setup.id, sessionToken, updates }),
-      })
+      const res = await fetch('/api/setups', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ setupId: setup.id, sessionToken, updates }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setSetups(prev => prev.map((s, i) => i === activeSetup ? { ...s, ...updates, image_url: image_url ?? s.image_url } : s))
-      setEditing(false)
-      setNewImageFile(null)
-      setNewImagePreview(null)
-      setRawImagePreview(null)
-      setShowCropper(false)
-      setScanResults([])
-      setScanDone(false)
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Error al guardar')
-    } finally {
-      setSaving(false)
-    }
+      applyAccentColor(editAccentColor)
+      setEditing(false); setNewImageFile(null); setNewImagePreview(null); setRawImagePreview(null); setShowCropper(false); setScanResults([]); setScanDone(false)
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error al guardar') }
+    finally { setSaving(false) }
   }
 
-  function copyLink() {
-    navigator.clipboard.writeText(window.location.href)
-    alert('¡Link copiado!')
-  }
+  function copyLink() { navigator.clipboard.writeText(window.location.href); alert('¡Link copiado!') }
 
   const inputStyle = {
     background: 'var(--surface2)', border: '1px solid var(--border)',
@@ -631,10 +532,92 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const peripherals = setup.components?.filter(c => c.type === 'peripheral' && c.name.trim()) || []
 
   return (
-    <div
-      data-setup-color={currentAccent}
-      style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}
-    >
+    <div data-setup-color={currentAccent} style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
+
+      {/* ── Modal Editar Perfil ── */}
+      {showProfileModal && (
+        <div onClick={e => { if (e.target === e.currentTarget) setShowProfileModal(false) }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 24, width: '100%', maxWidth: 480, padding: 32, position: 'relative', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
+            <button onClick={() => setShowProfileModal(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', width: 32, height: 32, borderRadius: '50%', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text)', marginBottom: 24 }}>Editar perfil</h2>
+
+            {/* Tag */}
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Tu tag</label>
+              {profileTag === 'Founder' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <ProfileTag tag="Founder" />
+                  <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>El tag Founder no se puede cambiar</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {TAGS.map(t => (
+                  <button key={t} onClick={() => setEditRoleTag(t)} style={{
+                    padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                    background: editRoleTag === t ? TAG_STYLES[t].bg : 'var(--surface2)',
+                    border: `1px solid ${editRoleTag === t ? TAG_STYLES[t].border : 'var(--border)'}`,
+                    color: editRoleTag === t ? TAG_STYLES[t].color : 'var(--text-muted)',
+                    transition: 'all 0.18s',
+                  }}>{t}</button>
+                ))}
+                {editRoleTag && (
+                  <button onClick={() => setEditRoleTag('')} style={{ padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>
+                    Sin tag
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Color de la app */}
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color de la app</label>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {ACCENT_COLORS.map(color => (
+                  <button key={color.id} onClick={() => setEditAppColor(color.id)} title={color.label}
+                    style={{
+                      width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', border: 'none',
+                      background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
+                      outline: editAppColor === color.id ? `3px solid ${color.from}` : '3px solid transparent',
+                      outlineOffset: 2,
+                      boxShadow: editAppColor === color.id ? `0 0 10px ${color.from}88` : 'none',
+                      transition: 'all 0.18s',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* ID afiliado */}
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>ID de afiliado Amazon</label>
+              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Si tienes cuenta en Amazon Associates, pega aquí tu ID (ej: tunombre-21).</p>
+              <input value={editAmazonAffiliateId} onChange={e => setEditAmazonAffiliateId(e.target.value)} placeholder="ej: tunombre-21" style={inputStyle} />
+            </div>
+
+            {/* PcComponentes toggle */}
+            <div style={{ marginBottom: 28 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Links de tiendas</label>
+              <button onClick={() => setEditShowPcComponentes(v => !v)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
+                <div style={{ width: 36, height: 20, borderRadius: 10, transition: 'background 0.2s', background: editShowPcComponentes ? `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))` : 'var(--border)', position: 'relative', flexShrink: 0 }}>
+                  <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#fff', position: 'absolute', top: 3, left: editShowPcComponentes ? 19 : 3, transition: 'left 0.2s' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Mostrar PcComponentes</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Amazon siempre aparece. PcComponentes es opcional.</div>
+                </div>
+              </button>
+            </div>
+
+            <button onClick={saveProfileModal} disabled={savingProfile} className="btn-primary" style={{ width: '100%', fontSize: 14, padding: 13, opacity: savingProfile ? 0.6 : 1 }}>
+              {savingProfile ? '⏳ Guardando...' : '✓ Guardar perfil'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Profile header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 36, flexWrap: 'wrap' }}>
         <div style={{ width: 72, height: 72, borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0b', border: '3px solid var(--setup-accent)', boxShadow: '0 0 20px var(--setup-accent-glow)' }}>
@@ -659,9 +642,12 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             ))}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
           {isOwner && !editing && (
-            <button onClick={startEditing} className="btn-secondary" style={{ fontSize: 13 }}>✏️ Editar perfil</button>
+            <>
+              <button onClick={openProfileModal} className="btn-secondary" style={{ fontSize: 13 }}>👤 Editar perfil</button>
+              <button onClick={startEditing} className="btn-secondary" style={{ fontSize: 13 }}>✏️ Editar setup</button>
+            </>
           )}
           <button onClick={copyLink} className="btn-primary" style={{ fontSize: 13, padding: '9px 18px' }}>🔗 Copiar link</button>
         </div>
@@ -685,7 +671,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         </div>
       )}
 
-      {/* ── MODO EDICIÓN ── */}
+      {/* ── MODO EDICIÓN SETUP ── */}
       {editing && isOwner && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--setup-accent)', borderRadius: 'var(--radius)', padding: 28, marginBottom: 28 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>✏️ Editando: {setup.title}</h2>
@@ -695,8 +681,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color del setup</label>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {ACCENT_COLORS.map(color => (
-                <button key={color.id} onClick={() => setEditAccentColor(color.id)}
-                  title={color.label}
+                <button key={color.id} onClick={() => setEditAccentColor(color.id)} title={color.label}
                   style={{
                     width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', border: 'none',
                     background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
@@ -708,57 +693,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                 />
               ))}
             </div>
-          </div>
-
-          {/* Tag */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Tu tag</label>
-            {profileTag === 'Founder' ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                <ProfileTag tag="Founder" />
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>El tag Founder no se puede cambiar</span>
-              </div>
-            ) : null}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {TAGS.map(t => (
-                <button key={t} onClick={() => setEditRoleTag(t)} style={{
-                  padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                  background: editRoleTag === t ? TAG_STYLES[t].bg : 'var(--surface2)',
-                  border: `1px solid ${editRoleTag === t ? TAG_STYLES[t].border : 'var(--border)'}`,
-                  color: editRoleTag === t ? TAG_STYLES[t].color : 'var(--text-muted)',
-                  transition: 'all 0.18s',
-                }}>
-                  {t}
-                </button>
-              ))}
-              {editRoleTag && (
-                <button onClick={() => setEditRoleTag('')} style={{ padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>
-                  Sin tag
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Links de afiliado */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Tu ID de afiliado Amazon</label>
-            <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Si tienes cuenta en Amazon Associates, pega aquí tu ID (ej: tunombre-21). Tus links llevarán tu ID y te llevarás la comisión.</p>
-            <input value={editAmazonAffiliateId} onChange={e => setEditAmazonAffiliateId(e.target.value)} placeholder="ej: tunombre-21" style={inputStyle} />
-          </div>
-
-          {/* PcComponentes toggle */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Links de tiendas</label>
-            <button onClick={() => setEditShowPcComponentes(v => !v)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
-              <div style={{ width: 36, height: 20, borderRadius: 10, transition: 'background 0.2s', background: editShowPcComponentes ? `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))` : 'var(--border)', position: 'relative', flexShrink: 0 }}>
-                <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#fff', position: 'absolute', top: 3, left: editShowPcComponentes ? 19 : 3, transition: 'left 0.2s' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Mostrar PcComponentes</div>
-                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Amazon siempre aparece. PcComponentes es opcional.</div>
-              </div>
-            </button>
           </div>
 
           {/* Título */}
@@ -789,12 +723,10 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             )}
           </div>
 
-          {/* Campo de texto libre + foto */}
+          {/* Componentes */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>🖥️ Añadir Componentes</label>
-            <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>
-              Escribe tus componentes como quieras. La IA los identificará y clasificará automáticamente.
-            </p>
+            <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>Escribe tus componentes como quieras. La IA los identificará y clasificará automáticamente.</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <textarea value={componentText} onChange={e => setComponentText(e.target.value)}
                 placeholder="Ej: RTX 4090 monitor LG 27 pulgadas keychron q1 logitech g pro ram 32gb..."
@@ -804,9 +736,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                 {scanning ? '⏳' : '✦ Analizar'}
               </button>
             </div>
-
-            <input ref={photoScanRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-              onChange={e => e.target.files?.[0] && scanComponentPhoto(e.target.files[0])} />
+            <input ref={photoScanRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && scanComponentPhoto(e.target.files[0])} />
             <button onClick={() => photoScanRef.current?.click()} disabled={photoScanning}
               style={{ background: 'transparent', border: '1px dashed var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '8px 14px', cursor: 'pointer', fontSize: 12, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: photoScanning ? 0.5 : 1 }}>
               {photoScanning ? '⏳ Identificando...' : '📷 ¿No sabes el nombre? Haz una foto al componente'}
@@ -822,9 +752,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                     ✓ Aceptar todos
                   </button>
                 </div>
-                <p style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 10 }}>
-                  ✏️ Haz clic en el nombre para editarlo si la IA se ha equivocado
-                </p>
+                <p style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 10 }}>✏️ Haz clic en el nombre para editarlo si la IA se ha equivocado</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {scanResults.map((comp, i) => (
                     <div key={i} style={{ background: 'var(--surface)', border: `1px solid ${comp.unknown ? 'rgba(255,77,109,0.3)' : comp.confident === false ? 'rgba(207,250,124,0.3)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
@@ -836,16 +764,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                               style={{ background: 'transparent', border: 'none', borderBottom: '1px dashed var(--border)', color: comp.unknown ? '#ff4d6d' : 'var(--text)', fontSize: 13, fontWeight: 600, outline: 'none', flex: 1, minWidth: 0, cursor: 'text', fontFamily: 'var(--font-display)', padding: '2px 4px' }} />
                             <span style={{ fontSize: 11, color: 'var(--text-dim)', flexShrink: 0 }}>✏️</span>
                           </div>
-                          {comp.did_you_mean && (
-                            <div style={{ fontSize: 12, color: 'var(--tag-text)', marginTop: 4 }}>
-                              💡 ¿Te refieres a: <strong>{comp.did_you_mean}</strong>?
-                            </div>
-                          )}
-                          {comp.unknown && (
-                            <div style={{ fontSize: 11, color: '#ff4d6d', marginTop: 2 }}>
-                              ⚠️ No reconocido — se añadirá tal como está
-                            </div>
-                          )}
+                          {comp.did_you_mean && <div style={{ fontSize: 12, color: 'var(--tag-text)', marginTop: 4 }}>💡 ¿Te refieres a: <strong>{comp.did_you_mean}</strong>?</div>}
+                          {comp.unknown && <div style={{ fontSize: 11, color: '#ff4d6d', marginTop: 2 }}>⚠️ No reconocido — se añadirá tal como está</div>}
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                           <button onClick={() => comp.did_you_mean ? acceptSuggestion(comp) : acceptComponent(comp)}
@@ -859,13 +779,12 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                 </div>
               </div>
             )}
-
             {scanDone && scanResults.length === 0 && editComponents.length > 0 && (
               <div style={{ marginTop: 8, fontSize: 12, color: 'var(--tag-text)' }}>✓ Todos los componentes añadidos</div>
             )}
           </div>
 
-          {/* Lista de componentes añadidos */}
+          {/* Lista componentes */}
           {editComponents.length > 0 && (
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>
@@ -881,10 +800,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                         onKeyDown={e => { if (e.key === 'Enter') confirmEditingComponent(); if (e.key === 'Escape') setEditingIndex(null) }}
                         autoFocus style={{ ...inputStyle, flex: 1, padding: '4px 8px' }} />
                     ) : (
-                      <span onClick={() => startEditingComponent(i, comp.name)} title="Haz clic para editar"
-                        style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)', cursor: 'text' }}>
-                        {comp.name}
-                      </span>
+                      <span onClick={() => startEditingComponent(i, comp.name)} style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)', cursor: 'text' }}>{comp.name}</span>
                     )}
                     <span style={{ fontSize: 11, color: 'var(--text-dim)', cursor: 'pointer' }} onClick={() => startEditingComponent(i, comp.name)}>✏️</span>
                     <button onClick={() => removeComponent(i)} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>✕</button>
@@ -922,7 +838,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         </div>
       )}
 
-      {/* ── Setup image con pins (vista) ── */}
+      {/* ── Setup image con pins ── */}
       {!editing && (
         <div style={{ marginBottom: 28 }}>
           {setup.image_url ? (
@@ -970,12 +886,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
 
       {/* ── Tabs Periféricos / Internos ── */}
       {!editing && (peripherals.length > 0 || internals.length > 0) && (
-        <ComponentTabs
-          peripherals={peripherals}
-          internals={internals}
-          showPcComponentes={showPcComponentes}
-          affiliateId={amazonAffiliateId}
-        />
+        <ComponentTabs peripherals={peripherals} internals={internals} showPcComponentes={showPcComponentes} affiliateId={amazonAffiliateId} />
       )}
 
       <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.5 }}>
