@@ -167,7 +167,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
                 fontSize: 16, cursor: 'pointer', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
               }}>
-                ⚙️
+                ✦
               </button>
 
               {settingsOpen && (
