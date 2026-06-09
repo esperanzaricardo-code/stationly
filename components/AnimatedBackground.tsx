@@ -78,7 +78,7 @@ export default function AnimatedBackground() {
       ctx.save()
       ctx.translate(s.x, s.y)
       ctx.rotate(s.rotation)
-      ctx.lineWidth = 0.8
+      ctx.lineWidth = 1.8
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
       ctx.beginPath()
