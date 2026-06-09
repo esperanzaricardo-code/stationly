@@ -3,11 +3,9 @@ import { useEffect, useState } from 'react'
 import { useTheme } from './ThemeProvider'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
 export default function LandingNav() {
   const { theme, toggle } = useTheme()
-  const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
   const [username, setUsername] = useState('')
@@ -31,6 +29,31 @@ export default function LandingNav() {
       }
     })
     return () => listener.subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('stationly-app-color')
+      if (stored) {
+        const map: Record<string, { accent: string; accent2: string; glow: string }> = {
+          lime:   { accent: '#CFFA7C', accent2: '#9CE89D', glow: 'rgba(207,250,124,0.25)' },
+          blue:   { accent: '#60a5fa', accent2: '#818cf8', glow: 'rgba(96,165,250,0.25)' },
+          purple: { accent: '#c084fc', accent2: '#a855f7', glow: 'rgba(192,132,252,0.25)' },
+          pink:   { accent: '#f472b6', accent2: '#fb7185', glow: 'rgba(244,114,182,0.25)' },
+          orange: { accent: '#fb923c', accent2: '#fbbf24', glow: 'rgba(251,146,60,0.25)' },
+          red:    { accent: '#f87171', accent2: '#ef4444', glow: 'rgba(248,113,113,0.25)' },
+          cyan:   { accent: '#22d3ee', accent2: '#38bdf8', glow: 'rgba(34,211,238,0.25)' },
+          yellow: { accent: '#fde047', accent2: '#facc15', glow: 'rgba(253,224,71,0.25)' },
+        }
+        const c = map[stored] || map.lime
+        const root = document.documentElement
+        root.style.setProperty('--accent', c.accent)
+        root.style.setProperty('--accent2', c.accent2)
+        root.style.setProperty('--accent-glow', c.glow)
+        root.style.setProperty('--tag-bg', `rgba(${c.glow.slice(5,-1).split(',').slice(0,3).join(',')},0.1)`)
+        root.style.setProperty('--tag-border', `rgba(${c.glow.slice(5,-1).split(',').slice(0,3).join(',')},0.3)`)
+      }
+    } catch {}
   }, [])
 
   return (
