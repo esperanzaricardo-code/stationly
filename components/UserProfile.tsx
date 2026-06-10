@@ -254,6 +254,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
 
   // Edición del setup
   const [editAccentColor, setEditAccentColor] = useState<AccentColor>('lime')
+  const [previewAccent, setPreviewAccent] = useState<AccentColor | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editCategories, setEditCategories] = useState<string[]>(['Gaming', 'Streaming'])
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
@@ -280,7 +281,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [showReport, setShowReport] = useState<Record<string, boolean>>({})
 
   const setup = setups[activeSetup]
-  const currentAccent = (setup?.accent_color || 'lime') as AccentColor
+  const currentAccent = (previewAccent ?? setup?.accent_color ?? 'lime') as AccentColor
 
   const PLACEHOLDER_COLORS = [
     ['#1a1a2e','#16213e','#0f3460'],
@@ -482,6 +483,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
 
   function cancelEditing() {
     applyAccentColor((setup.accent_color || 'lime') as AccentColor)
+    setPreviewAccent(null)
     setEditing(false)
     setNewImageFile(null)
     setNewImagePreview(null)
@@ -614,7 +616,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       clearDraft(setup.id)
       setSetups(prev => prev.map((s, i) => i === activeSetup ? { ...s, ...updates, image_url: image_url ?? s.image_url } : s))
       applyAccentColor(editAccentColor)
-      setEditing(false); setNewImageFile(null); setNewImagePreview(null); setRawImagePreview(null); setShowCropper(false); setScanResults([]); setScanDone(false); setDraftRestored(false)
+      setEditing(false); setNewImageFile(null); setNewImagePreview(null); setRawImagePreview(null); setShowCropper(false); setScanResults([]); setScanDone(false); setDraftRestored(false); setPreviewAccent(null)
     } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error al guardar') }
     finally { setSaving(false) }
   }
@@ -815,7 +817,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color del setup</label>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {ACCENT_COLORS.map(color => (
-                <button key={color.id} onClick={() => { setEditAccentColor(color.id); applyAccentColor(color.id as AccentColor) }} title={color.label}
+                <button key={color.id} onClick={() => { setEditAccentColor(color.id); setPreviewAccent(color.id as AccentColor); applyAccentColor(color.id as AccentColor) }} title={color.label}
                   style={{
                     width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', border: 'none',
                     background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
