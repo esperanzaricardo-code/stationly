@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ThemeProvider } from '@/components/ThemeProvider'
@@ -16,8 +16,23 @@ function LoginForm() {
   const [success, setSuccess] = useState('')
   const router = useRouter()
 
+  // La página de login siempre es verde lima
+  useEffect(() => {
+    try {
+      const root = document.documentElement
+      root.style.setProperty('--accent',            '#CFFA7C')
+      root.style.setProperty('--accent2',           '#9CE89D')
+      root.style.setProperty('--accent-glow',       'rgba(207,250,124,0.25)')
+      root.style.setProperty('--setup-accent',      '#CFFA7C')
+      root.style.setProperty('--setup-accent2',     '#9CE89D')
+      root.style.setProperty('--setup-accent-glow', 'rgba(207,250,124,0.25)')
+      root.style.setProperty('--tag-bg',            'rgba(207,250,124,0.1)')
+      root.style.setProperty('--tag-border',        'rgba(207,250,124,0.3)')
+      root.style.setProperty('--tag-text',          '#CFFA7C')
+    } catch {}
+  }, [])
+
   function handleUsernameChange(value: string) {
-    // No permitir espacios, solo letras, números, guiones y guiones bajos
     const clean = value.replace(/[^a-zA-Z0-9_-]/g, '')
     setUsername(clean)
   }
