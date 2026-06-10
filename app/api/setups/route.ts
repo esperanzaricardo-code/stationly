@@ -7,6 +7,20 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+function supabaseForUser(sessionToken: string) {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${sessionToken}` } } }
+  )
+}
+
+async function getUserFromToken(sessionToken: string) {
+  const client = supabaseForUser(sessionToken)
+  const { data: { user }, error } = await client.auth.getUser()
+  return { user: error ? null : user, client }
+}
+
 async function moderateImage(base64: string, mediaType: string): Promise<{ safe: boolean; reason?: string }> {
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
@@ -57,8 +71,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Debes iniciar sesión para publicar' }, { status: 401 })
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(sessionToken)
-    if (authError || !user) {
+    const { user } = await getUserFromToken(sessionToken)
+    if (!user) {
       return NextResponse.json({ error: 'Sesión inválida. Inicia sesión de nuevo.' }, { status: 401 })
     }
 
@@ -131,8 +145,8 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 })
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(sessionToken)
-    if (authError || !user) {
+    const { user } = await getUserFromToken(sessionToken)
+    if (!user) {
       return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 })
     }
 
@@ -168,8 +182,8 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 })
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(sessionToken)
-    if (authError || !user) {
+    const { user } = await getUserFromToken(sessionToken)
+    if (!user) {
       return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 })
     }
 
