@@ -87,8 +87,8 @@ export default function ConfirmModal() {
               background: request.danger
                 ? 'rgba(255,77,109,0.15)'
                 : 'linear-gradient(135deg, var(--accent), var(--accent2))',
-              border: request.danger ? '1px solid rgba(255,77,109,0.4)' : 'none',
               color: request.danger ? '#ff4d6d' : '#0a0a0b',
+              outline: request.danger ? '1px solid rgba(255,77,109,0.4)' : 'none',
             } as React.CSSProperties}
           >
             {request.confirmLabel || 'Confirmar'}
