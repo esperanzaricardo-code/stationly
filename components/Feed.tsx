@@ -58,20 +58,21 @@ export default function Feed({ initialSetups }: { initialSetups: Setup[] }) {
     const onRequireAuth = () => setShowRegisterPrompt(true)
     document.addEventListener('stationly:require-auth', onRequireAuth)
 
-    // Cargar setups reportados por el usuario
+    // Cargar setups reportados por el usuario via API
     import('@/lib/supabase').then(({ supabase }) => {
       supabase.auth.getSession().then(({ data }) => {
-        const user = data.session?.user
-        if (!user) return
-        const uname = user.user_metadata?.username || user.email?.split('@')[0] || ''
-        supabase.from('reports')
-          .select('setup_id')
-          .eq('user_name', uname)
-          .then(({ data: reportData }) => {
-            if (reportData && reportData.length > 0) {
-              setReportedIds(new Set(reportData.map(r => r.setup_id)))
+        const token = data.session?.access_token
+        if (!token) return
+        fetch('/api/reports', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+          .then(r => r.json())
+          .then(({ reportedIds }) => {
+            if (reportedIds?.length > 0) {
+              setReportedIds(new Set(reportedIds))
             }
           })
+          .catch(() => {})
       })
     })
 
