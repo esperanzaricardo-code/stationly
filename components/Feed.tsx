@@ -104,7 +104,9 @@ export default function Feed({ initialSetups }: { initialSetups: Setup[] }) {
         style={{
           position: 'relative', zIndex: 1,
           columns: 4, columnGap: 16,
-          padding: '0 32px 80px', maxWidth: 1400, margin: '0 auto',
+          padding: '0 32px 80px',
+          maxWidth: 1400, margin: '0 auto',
+          width: '100%', boxSizing: 'border-box',
         }}
         className="feed"
       >
