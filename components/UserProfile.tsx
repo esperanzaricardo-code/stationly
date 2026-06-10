@@ -358,6 +358,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   function switchSetup(index: number) {
     setActiveSetup(index)
     setEditing(false)
+    setPreviewAccent(null)
     const setupId = setups[index].id
     router.replace(`/u/${encodeURIComponent(username)}?setup=${setupId}`, { scroll: false })
     applyAccentColor((setups[index].accent_color || 'lime') as AccentColor)
