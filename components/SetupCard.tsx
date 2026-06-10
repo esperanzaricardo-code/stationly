@@ -130,6 +130,8 @@ export default function SetupCard({ setup }: { setup: Setup }) {
       })
     } catch {}
     setReported(true)
+    // Notificar al feed para que oculte este setup inmediatamente
+    document.dispatchEvent(new CustomEvent('stationly:reported', { detail: setup.id }))
     toastInfo('Setup reportado. Gracias por ayudarnos a mantener la comunidad.')
   }
 
