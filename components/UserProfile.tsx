@@ -481,6 +481,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   }
 
   function cancelEditing() {
+    applyAccentColor((setup.accent_color || 'lime') as AccentColor)
     setEditing(false)
     setNewImageFile(null)
     setNewImagePreview(null)
@@ -814,7 +815,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color del setup</label>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {ACCENT_COLORS.map(color => (
-                <button key={color.id} onClick={() => setEditAccentColor(color.id)} title={color.label}
+                <button key={color.id} onClick={() => { setEditAccentColor(color.id); applyAccentColor(color.id as AccentColor) }} title={color.label}
                   style={{
                     width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', border: 'none',
                     background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
