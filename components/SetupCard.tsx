@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { Setup } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { toastInfo } from './Toast'
+import ReportModal from './ReportModal'
 
 const AVATAR_GRADIENTS = [
   ['#CFFA7C','#9CE89D'], ['#f43f5e','#fb923c'], ['#06b6d4','#6366f1'],
@@ -47,17 +48,36 @@ export default function SetupCard({ setup }: { setup: Setup }) {
   const [loading, setLoading] = useState(false)
   const [hovered, setHovered] = useState(false)
   const [reported, setReported] = useState(false)
-  const [showReport, setShowReport] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [sessionToken, setSessionToken] = useState('')
+  const [currentUser, setCurrentUser] = useState('')
 
   useEffect(() => {
-    // Detectar si hay sesión activa
     import('@/lib/supabase').then(({ supabase }) => {
       supabase.auth.getSession().then(({ data }) => {
-        setIsLoggedIn(!!data.session?.user)
+        const user = data.session?.user
+        if (user) {
+          setIsLoggedIn(true)
+          setSessionToken(data.session?.access_token || '')
+          const uname = user.user_metadata?.username || user.email?.split('@')[0] || ''
+          setCurrentUser(uname)
+
+          // Cargar si ya reportó este setup
+          supabase.from('reports')
+            .select('id')
+            .eq('setup_id', setup.id)
+            .eq('user_name', uname)
+            .single()
+            .then(({ data: existing }) => {
+              if (existing) setReported(true)
+            })
+        }
       })
     })
-  }, [])
+  }, [setup.id])
+
+  const isOwn = currentUser && currentUser.toLowerCase() === setup.user_name.toLowerCase()
 
   function handleCardClick() {
     router.push(`/u/${encodeURIComponent(setup.user_name)}?setup=${setup.id}`)
@@ -65,7 +85,6 @@ export default function SetupCard({ setup }: { setup: Setup }) {
 
   async function toggleLike(e: React.MouseEvent) {
     e.stopPropagation()
-    // Si no está registrado, emitir evento para mostrar popup
     if (!isLoggedIn) {
       document.dispatchEvent(new CustomEvent('stationly:require-auth'))
       return
@@ -91,44 +110,58 @@ export default function SetupCard({ setup }: { setup: Setup }) {
     }
   }
 
-  async function handleReport(e: React.MouseEvent) {
+  function handleReportClick(e: React.MouseEvent) {
     e.stopPropagation()
+    if (!isLoggedIn) {
+      document.dispatchEvent(new CustomEvent('stationly:require-auth'))
+      return
+    }
+    setShowReportModal(true)
+  }
+
+  async function handleReport(reason: string) {
+    setShowReportModal(false)
     if (reported) return
     try {
       await fetch('/api/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: setup.id, user: setup.user_name }),
+        body: JSON.stringify({ id: setup.id, sessionToken, reason }),
       })
     } catch {}
     setReported(true)
-    setShowReport(false)
     toastInfo('Setup reportado. Gracias por ayudarnos a mantener la comunidad.')
   }
 
   return (
-    <div
-      onClick={handleCardClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); setShowReport(false) }}
-      style={{
-        breakInside: 'avoid', marginBottom: 16,
-        background: 'var(--surface)',
-        border: `1px solid ${hovered ? 'var(--accent)' : 'var(--border)'}`,
-        borderRadius: 'var(--radius)', overflow: 'hidden', cursor: 'pointer',
-        transform: hovered ? 'translateY(-4px)' : 'none',
-        boxShadow: hovered ? '0 16px 48px rgba(0,0,0,0.2)' : 'var(--shadow)',
-        transition: 'transform 0.25s cubic-bezier(.4,0,.2,1), box-shadow 0.25s, border-color 0.25s',
-        animation: 'cardIn 0.5s cubic-bezier(.4,0,.2,1) both',
-        position: 'relative',
-      }}
-    >
-      {/* Report button */}
-      {hovered && !reported && (
-        <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 10 }}>
-          {!showReport ? (
+    <>
+      {showReportModal && (
+        <ReportModal
+          onConfirm={handleReport}
+          onCancel={() => setShowReportModal(false)}
+        />
+      )}
+      <div
+        onClick={handleCardClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          breakInside: 'avoid', marginBottom: 16,
+          background: 'var(--surface)',
+          border: `1px solid ${hovered ? 'var(--accent)' : 'var(--border)'}`,
+          borderRadius: 'var(--radius)', overflow: 'hidden', cursor: 'pointer',
+          transform: hovered ? 'translateY(-4px)' : 'none',
+          boxShadow: hovered ? '0 16px 48px rgba(0,0,0,0.2)' : 'var(--shadow)',
+          transition: 'transform 0.25s cubic-bezier(.4,0,.2,1), box-shadow 0.25s, border-color 0.25s',
+          animation: 'cardIn 0.5s cubic-bezier(.4,0,.2,1) both',
+          position: 'relative',
+        }}
+      >
+        {/* Report button — solo si no es propio y no ha reportado */}
+        {hovered && !isOwn && !reported && (
+          <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 10 }}>
             <button
-              onClick={e => { e.stopPropagation(); setShowReport(true) }}
+              onClick={handleReportClick}
               title="Reportar contenido"
               style={{
                 background: 'rgba(0,0,0,0.6)', border: 'none', color: 'rgba(255,255,255,0.6)',
@@ -139,102 +172,75 @@ export default function SetupCard({ setup }: { setup: Setup }) {
             >
               ⚑
             </button>
-          ) : (
-            <div style={{
-              background: 'var(--surface)', border: '1px solid var(--border)',
-              borderRadius: 10, padding: '8px 12px', fontSize: 12,
-              color: 'var(--text)', boxShadow: 'var(--shadow)',
-              display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140,
-            }}>
-              <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>
-                ¿Reportar este setup?
-              </span>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={handleReport} style={{
-                  flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)',
-                  color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px',
-                  borderRadius: 6, cursor: 'pointer',
-                }}>
-                  Reportar
-                </button>
-                <button onClick={e => { e.stopPropagation(); setShowReport(false) }} style={{
-                  flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)',
-                  color: 'var(--text-muted)', fontSize: 11, padding: '4px 8px',
-                  borderRadius: 6, cursor: 'pointer',
-                }}>
-                  Cancelar
-                </button>
-              </div>
+          </div>
+        )}
+
+        {/* Image */}
+        <div style={{ position: 'relative', overflow: 'hidden', background: 'var(--surface3)' }}>
+          {setup.image_url ? (
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3' }}>
+              <Image
+                src={setup.image_url} alt={setup.title} fill
+                style={{ objectFit: 'cover', transform: hovered ? 'scale(1.04)' : 'scale(1)', transition: 'transform 0.4s cubic-bezier(.4,0,.2,1)' }}
+                sizes="(max-width: 540px) 100vw, (max-width: 860px) 50vw, (max-width: 1200px) 33vw, 25vw"
+              />
             </div>
+          ) : (
+            <PlaceholderImg user={setup.user_name} />
+          )}
+          {hovered && (
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 60%)' }} />
           )}
         </div>
-      )}
 
-      {/* Image */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'var(--surface3)' }}>
-        {setup.image_url ? (
-          <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3' }}>
-            <Image
-              src={setup.image_url} alt={setup.title} fill
-              style={{ objectFit: 'cover', transform: hovered ? 'scale(1.04)' : 'scale(1)', transition: 'transform 0.4s cubic-bezier(.4,0,.2,1)' }}
-              sizes="(max-width: 540px) 100vw, (max-width: 860px) 50vw, (max-width: 1200px) 33vw, 25vw"
-            />
-          </div>
-        ) : (
-          <PlaceholderImg user={setup.user_name} />
-        )}
-        {hovered && (
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 60%)' }} />
-        )}
-      </div>
-
-      {/* Body */}
-      <div style={{ padding: '12px 14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <div style={{
-              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-              background: getAvatarGradient(setup.user_name),
-              fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#0a0a0b',
-            }}>
-              {setup.user_name.slice(0, 2).toUpperCase()}
-            </div>
-            <div style={{ minWidth: 0 }}>
+        {/* Body */}
+        <div style={{ padding: '12px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
               <div style={{
-                fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-                color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                background: getAvatarGradient(setup.user_name),
+                fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#0a0a0b',
               }}>
-                {setup.user_name}
+                {setup.user_name.slice(0, 2).toUpperCase()}
               </div>
-              <div style={{
-                fontSize: 11, color: 'var(--text-dim)',
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              }}>
-                {setup.title}
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
+                  color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {setup.user_name}
+                </div>
+                <div style={{
+                  fontSize: 11, color: 'var(--text-dim)',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {setup.title}
+                </div>
               </div>
             </div>
-          </div>
 
-          <button
-            onClick={toggleLike}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
-              background: liked ? 'rgba(255,77,109,0.1)' : 'transparent',
-              border: `1px solid ${liked ? 'rgba(255,77,109,0.5)' : 'var(--border)'}`,
-              color: liked ? 'var(--like)' : 'var(--text-muted)',
-              fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 500,
-              padding: '5px 10px', borderRadius: 50, cursor: 'pointer', transition: 'all 0.18s',
-            }}
-          >
-            <span style={{ fontSize: 12, transition: 'transform 0.2s', transform: liked ? 'scale(1.25)' : 'scale(1)' }}>
-              {liked ? '♥' : '♡'}
-            </span>
-            {likes}
-          </button>
+            <button
+              onClick={toggleLike}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+                background: liked ? 'rgba(255,77,109,0.1)' : 'transparent',
+                border: `1px solid ${liked ? 'rgba(255,77,109,0.5)' : 'var(--border)'}`,
+                color: liked ? 'var(--like)' : 'var(--text-muted)',
+                fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 500,
+                padding: '5px 10px', borderRadius: 50, cursor: 'pointer', transition: 'all 0.18s',
+              }}
+            >
+              <span style={{ fontSize: 12, transition: 'transform 0.2s', transform: liked ? 'scale(1.25)' : 'scale(1)' }}>
+                {liked ? '♥' : '♡'}
+              </span>
+              {likes}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
