@@ -65,7 +65,7 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, components
         style={{
           position: 'relative', width: '100%', aspectRatio: '4/3',
           borderRadius: 'var(--radius)',
-          border: `1px solid ${editing ? 'var(--accent)' : 'var(--border)'}`,
+          border: `1px solid ${editing ? 'var(--setup-accent)' : 'var(--border)'}`,
           cursor: editing ? 'crosshair' : 'default',
           boxShadow: 'var(--shadow-lg)',
           overflow: 'visible',
@@ -99,7 +99,7 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, components
               left: `${Math.min(pendingPin.x, 65)}%`,
               top: `${Math.min(pendingPin.y, 65)}%`,
               background: 'var(--surface)',
-              border: '1px solid var(--accent)',
+              border: '1px solid var(--setup-accent)',
               borderRadius: 'var(--radius-sm)',
               padding: 12,
               minWidth: 220,
@@ -134,7 +134,7 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, components
                       padding: '8px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                       textAlign: 'left', transition: 'border-color 0.15s',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--setup-accent)')}
                     onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
                   >
                     {comp.name}
@@ -166,8 +166,8 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, components
               width: hoveredPin === pin.id || activePin === pin.id ? 26 : 18,
               height: hoveredPin === pin.id || activePin === pin.id ? 26 : 18,
               borderRadius: '50%',
-              background: activePin === pin.id ? 'var(--accent)' : 'rgba(0,0,0,0.75)',
-              border: `2px solid ${activePin === pin.id ? '#0a0a0b' : 'var(--accent)'}`,
+              background: activePin === pin.id ? 'var(--setup-accent)' : 'rgba(0,0,0,0.75)',
+              border: `2px solid ${activePin === pin.id ? '#0a0a0b' : 'var(--setup-accent)'}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
               transition: 'all 0.15s',
@@ -177,7 +177,7 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, components
                 width: hoveredPin === pin.id || activePin === pin.id ? 7 : 5,
                 height: hoveredPin === pin.id || activePin === pin.id ? 7 : 5,
                 borderRadius: '50%',
-                background: activePin === pin.id ? '#0a0a0b' : 'var(--accent)',
+                background: activePin === pin.id ? '#0a0a0b' : 'var(--setup-accent)',
                 transition: 'all 0.15s',
               }} />
             </div>
@@ -192,7 +192,7 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, components
                   left: '50%',
                   transform: 'translateX(-50%)',
                   background: 'var(--surface)',
-                  border: '1px solid var(--border)',
+                  border: '1px solid var(--setup-accent)',
                   borderRadius: 'var(--radius-sm)',
                   padding: '12px 14px',
                   minWidth: 200,
@@ -209,7 +209,7 @@ export default function PinEditor({ imageUrl, pins, isOwner, editing, components
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {pin.links.filter(l => l.shop !== 'MediaMarkt').map((link, li) => (
                       <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
-                        style={{ background: 'linear-gradient(135deg, #CFFA7C, #9CE89D)', color: '#0a0a0b', fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 50, textDecoration: 'none' }}>
+                        style={{ background: 'linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))', color: 'var(--setup-accent-fg, #0a0a0b)', fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 50, textDecoration: 'none' }}>
                         {link.shop} →
                       </a>
                     ))}
