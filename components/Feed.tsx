@@ -8,31 +8,36 @@ export default function Feed({ initialSetups }: { initialSetups: Setup[] }) {
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
-    // Listen for filter changes
     const onFilter = (e: Event) => setFilter((e as CustomEvent).detail)
     document.addEventListener('stationly:filter', onFilter)
-
-    // Listen for new setup published
     const onNewSetup = (e: Event) => {
       const setup = (e as CustomEvent).detail as Setup
       setSetups(prev => [setup, ...prev])
     }
     document.addEventListener('stationly:new-setup', onNewSetup)
-
     return () => {
       document.removeEventListener('stationly:filter', onFilter)
       document.removeEventListener('stationly:new-setup', onNewSetup)
     }
   }, [])
 
-  const filtered = filter === 'all' ? setups : setups.filter(s => s.category === filter)
+  const filtered = filter === 'all'
+    ? setups
+    : setups.filter(s =>
+        s.category
+          ?.toLowerCase()
+          .split(',')
+          .map(c => c.trim())
+          .includes(filter.toLowerCase())
+      )
 
   return (
-    <main style={{
-      position: 'relative', zIndex: 1,
-      columns: 4, columnGap: 16,
-      padding: '0 32px 80px', maxWidth: 1400, margin: '0 auto',
-    }}
+    <main
+      style={{
+        position: 'relative', zIndex: 1,
+        columns: 4, columnGap: 16,
+        padding: '0 32px 80px', maxWidth: 1400, margin: '0 auto',
+      }}
       className="feed"
     >
       <style>{`
