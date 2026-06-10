@@ -1,13 +1,16 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import AnimatedBackground from '@/components/AnimatedBackground'
 import Link from 'next/link'
 
 function LoginForm() {
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const searchParams = useSearchParams()
+  const [mode, setMode] = useState<'login' | 'register'>(
+    searchParams.get('mode') === 'register' ? 'register' : 'login'
+  )
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
@@ -44,6 +47,7 @@ function LoginForm() {
       if (!username) { setError('Elige un nombre de usuario'); return }
       if (username.length < 3) { setError('El nombre de usuario debe tener al menos 3 caracteres'); return }
       if (username.length > 20) { setError('El nombre de usuario no puede tener más de 20 caracteres'); return }
+      if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres'); return }
     }
     setLoading(true)
     try {
@@ -60,17 +64,35 @@ function LoginForm() {
         setSuccess('¡Cuenta creada! Revisa tu email para confirmar.')
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error desconocido')
+      // Traducir errores comunes de Supabase a español
+      const msg = err instanceof Error ? err.message : 'Error desconocido'
+      if (msg.includes('Password should be at least'))
+        setError('La contraseña debe tener al menos 6 caracteres')
+      else if (msg.includes('already registered') || msg.includes('already been registered'))
+        setError('Este email ya tiene una cuenta. ¿Quieres iniciar sesión?')
+      else if (msg.includes('Invalid login credentials'))
+        setError('Email o contraseña incorrectos')
+      else if (msg.includes('Email not confirmed'))
+        setError('Confirma tu email antes de iniciar sesión')
+      else
+        setError(msg)
     } finally {
       setLoading(false)
     }
   }
 
+  const inputStyle = {
+    width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)',
+    color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 14,
+    padding: '11px 14px', borderRadius: 'var(--radius-sm)', outline: 'none',
+  }
+  const labelStyle = {
+    display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)',
+    letterSpacing: '0.8px', textTransform: 'uppercase' as const, marginBottom: 7,
+  }
+
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', padding: 20,
-    }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{
         background: 'var(--surface)', border: '1px solid var(--border)',
         borderRadius: 24, width: '100%', maxWidth: 420, padding: 40,
@@ -82,9 +104,10 @@ function LoginForm() {
           </span>
         </Link>
 
+        {/* Selector login / registro */}
         <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 50, padding: 4, marginBottom: 28 }}>
           {(['login', 'register'] as const).map(m => (
-            <button key={m} onClick={() => setMode(m)} style={{
+            <button key={m} onClick={() => { setMode(m); setError('') }} style={{
               flex: 1, padding: '8px', borderRadius: 50, border: 'none',
               background: mode === m ? 'linear-gradient(135deg, #CFFA7C, #9CE89D)' : 'transparent',
               color: mode === m ? '#0a0a0b' : 'var(--text-muted)',
@@ -96,42 +119,65 @@ function LoginForm() {
           ))}
         </div>
 
+        {/* Username — solo en registro */}
         {mode === 'register' && (
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Nombre de usuario</label>
+            <label style={labelStyle}>Nombre de usuario</label>
             <input
               value={username}
               onChange={e => handleUsernameChange(e.target.value)}
               placeholder="Ej: NightOwl, StreamQueen..."
               maxLength={20}
-              style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 14, padding: '11px 14px', borderRadius: 'var(--radius-sm)', outline: 'none' }}
+              style={inputStyle}
             />
             <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 5 }}>
-              Solo letras, números, - y _. Sin espacios. {username.length}/20
+              Letras, números, - y _. Sin espacios. {username.length}/20
             </div>
           </div>
         )}
 
-        {[
-          { label: 'Email', type: 'email', value: email, set: setEmail, placeholder: 'tu@email.com' },
-          { label: 'Contraseña', type: 'password', value: password, set: setPassword, placeholder: '••••••••' },
-        ].map(f => (
-          <div key={f.label} style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>{f.label}</label>
-            <input
-              type={f.type} value={f.value}
-              onChange={e => f.set(e.target.value)}
-              placeholder={f.placeholder}
-              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-              style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 14, padding: '11px 14px', borderRadius: 'var(--radius-sm)', outline: 'none' }}
-            />
+        {/* Email */}
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Email</label>
+          <input
+            type="email" value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="tu@email.com"
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Contraseña */}
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Contraseña</label>
+          <input
+            type="password" value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="••••••••"
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            style={inputStyle}
+          />
+          {mode === 'register' && (
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 5 }}>
+              Mínimo 6 caracteres
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <div style={{ background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 13, padding: '10px 14px', borderRadius: 'var(--radius-sm)', marginBottom: 16 }}>
+            {error}
           </div>
-        ))}
+        )}
+        {success && (
+          <div style={{ background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', color: 'var(--tag-text)', fontSize: 13, padding: '10px 14px', borderRadius: 'var(--radius-sm)', marginBottom: 16 }}>
+            {success}
+          </div>
+        )}
 
-        {error && <div style={{ background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 13, padding: '10px 14px', borderRadius: 'var(--radius-sm)', marginBottom: 16 }}>{error}</div>}
-        {success && <div style={{ background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', color: 'var(--tag-text)', fontSize: 13, padding: '10px 14px', borderRadius: 'var(--radius-sm)', marginBottom: 16 }}>{success}</div>}
-
-        <button onClick={handleSubmit} disabled={loading} className="btn-primary" style={{ width: '100%', fontSize: 15, padding: 14, opacity: loading ? 0.6 : 1, marginTop: 8 }}>
+        <button onClick={handleSubmit} disabled={loading} className="btn-primary"
+          style={{ width: '100%', fontSize: 15, padding: 14, opacity: loading ? 0.6 : 1, marginTop: 8 }}>
           {loading ? '⏳ Cargando...' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
         </button>
 
@@ -147,7 +193,9 @@ export default function LoginPage() {
   return (
     <ThemeProvider>
       <AnimatedBackground />
-      <LoginForm />
+      <Suspense>
+        <LoginForm />
+      </Suspense>
     </ThemeProvider>
   )
 }
