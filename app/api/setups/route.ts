@@ -2,23 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 
+// Cliente público para lectura e inserción
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-function supabaseForUser(sessionToken: string) {
-  return createClient(
+// Cliente admin para DELETE y UPDATE — bypasea RLS pero verificamos ownership en código
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+async function getUserFromToken(sessionToken: string) {
+  const client = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { global: { headers: { Authorization: `Bearer ${sessionToken}` } } }
   )
-}
-
-async function getUserFromToken(sessionToken: string) {
-  const client = supabaseForUser(sessionToken)
   const { data: { user }, error } = await client.auth.getUser()
-  return { user: error ? null : user, client }
+  return error ? null : user
 }
 
 async function moderateImage(base64: string, mediaType: string): Promise<{ safe: boolean; reason?: string }> {
@@ -71,7 +74,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Debes iniciar sesión para publicar' }, { status: 401 })
     }
 
-    const { user } = await getUserFromToken(sessionToken)
+    const user = await getUserFromToken(sessionToken)
     if (!user) {
       return NextResponse.json({ error: 'Sesión inválida. Inicia sesión de nuevo.' }, { status: 401 })
     }
@@ -84,9 +87,7 @@ export async function POST(req: NextRequest) {
 
     const rawTags: string[] = tagsRaw ? JSON.parse(tagsRaw) : []
     const tags = rawTags.map((name: string) => ({
-      name,
-      type: 'peripheral',
-      links: [],
+      name, type: 'peripheral', links: [],
     }))
 
     let image_url: string | null = null
@@ -117,15 +118,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabase
       .from('setups')
-      .insert([{
-        user_name: userName,
-        title,
-        category,
-        tags,
-        components: [],
-        image_url,
-        likes: 0,
-      }])
+      .insert([{ user_name: userName, title, category, tags, components: [], image_url, likes: 0 }])
       .select().single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -145,21 +138,22 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 })
     }
 
-    const { user } = await getUserFromToken(sessionToken)
+    const user = await getUserFromToken(sessionToken)
     if (!user) {
       return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 })
     }
 
     const userName = user.user_metadata?.username || user.email?.split('@')[0] || 'usuario'
 
-    const { data: existing } = await supabase
+    // Verificamos ownership antes de actualizar
+    const { data: existing } = await supabaseAdmin
       .from('setups').select('user_name').eq('id', setupId).single()
 
     if (!existing || existing.user_name.toLowerCase() !== userName.toLowerCase()) {
       return NextResponse.json({ error: 'No tienes permiso para editar este setup' }, { status: 403 })
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('setups')
       .update(updates)
       .eq('id', setupId)
@@ -182,21 +176,22 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 })
     }
 
-    const { user } = await getUserFromToken(sessionToken)
+    const user = await getUserFromToken(sessionToken)
     if (!user) {
       return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 })
     }
 
     const userName = user.user_metadata?.username || user.email?.split('@')[0] || 'usuario'
 
-    const { data: existing } = await supabase
+    // Verificamos ownership antes de eliminar
+    const { data: existing } = await supabaseAdmin
       .from('setups').select('user_name').eq('id', setupId).single()
 
     if (!existing || existing.user_name.toLowerCase() !== userName.toLowerCase()) {
       return NextResponse.json({ error: 'No tienes permiso para eliminar este setup' }, { status: 403 })
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('setups').delete().eq('id', setupId)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
