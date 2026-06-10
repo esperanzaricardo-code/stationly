@@ -332,21 +332,20 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         setIsLoggedIn(true)
         setSessionToken(data.session?.access_token || '')
 
-        // Cargar reportes previos del usuario para estos setups
-        const setupIds = initialSetups.map(s => s.id)
-        if (setupIds.length > 0) {
-          supabase.from('reports')
-            .select('setup_id')
-            .eq('user_name', uname)
-            .in('setup_id', setupIds)
-            .then(({ data: reportData }) => {
-              if (reportData && reportData.length > 0) {
-                const alreadyReported: Record<string, boolean> = {}
-                reportData.forEach(r => { alreadyReported[r.setup_id] = true })
-                setReported(alreadyReported)
-              }
-            })
-        }
+        // Cargar reportes previos del usuario via API
+        const token = data.session?.access_token || ''
+        fetch('/api/reports', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+          .then(r => r.json())
+          .then(({ reportedIds }) => {
+            if (reportedIds?.length > 0) {
+              const alreadyReported: Record<string, boolean> = {}
+              reportedIds.forEach((id: string) => { alreadyReported[id] = true })
+              setReported(alreadyReported)
+            }
+          })
+          .catch(() => {})
       }
     })
     const initialLikes: Record<string, number> = {}
