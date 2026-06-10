@@ -137,7 +137,7 @@ export default function LandingNav() {
               }}>
                 Iniciar sesión
               </Link>
-              <Link href="/login" className="btn-primary" style={{ fontSize: 13, padding: '9px 18px' }}>
+              <Link href="/login?mode=register" className="btn-primary" style={{ fontSize: 13, padding: '9px 18px' }}>
                 Registrarse
               </Link>
             </>
