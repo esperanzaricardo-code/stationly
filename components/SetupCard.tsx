@@ -1,8 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Setup } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { toastInfo } from './Toast'
 
 const AVATAR_GRADIENTS = [
   ['#CFFA7C','#9CE89D'], ['#f43f5e','#fb923c'], ['#06b6d4','#6366f1'],
@@ -47,6 +48,16 @@ export default function SetupCard({ setup }: { setup: Setup }) {
   const [hovered, setHovered] = useState(false)
   const [reported, setReported] = useState(false)
   const [showReport, setShowReport] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    // Detectar si hay sesión activa
+    import('@/lib/supabase').then(({ supabase }) => {
+      supabase.auth.getSession().then(({ data }) => {
+        setIsLoggedIn(!!data.session?.user)
+      })
+    })
+  }, [])
 
   function handleCardClick() {
     router.push(`/u/${encodeURIComponent(setup.user_name)}?setup=${setup.id}`)
@@ -54,6 +65,11 @@ export default function SetupCard({ setup }: { setup: Setup }) {
 
   async function toggleLike(e: React.MouseEvent) {
     e.stopPropagation()
+    // Si no está registrado, emitir evento para mostrar popup
+    if (!isLoggedIn) {
+      document.dispatchEvent(new CustomEvent('stationly:require-auth'))
+      return
+    }
     if (loading) return
     setLoading(true)
     const newLiked = !liked
@@ -87,6 +103,7 @@ export default function SetupCard({ setup }: { setup: Setup }) {
     } catch {}
     setReported(true)
     setShowReport(false)
+    toastInfo('Setup reportado. Gracias por ayudarnos a mantener la comunidad.')
   }
 
   return (
@@ -107,7 +124,7 @@ export default function SetupCard({ setup }: { setup: Setup }) {
       }}
     >
       {/* Report button */}
-      {hovered && (
+      {hovered && !reported && (
         <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 10 }}>
           {!showReport ? (
             <button
@@ -130,26 +147,24 @@ export default function SetupCard({ setup }: { setup: Setup }) {
               display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140,
             }}>
               <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>
-                {reported ? '✓ Reportado' : '¿Reportar este setup?'}
+                ¿Reportar este setup?
               </span>
-              {!reported && (
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button onClick={handleReport} style={{
-                    flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)',
-                    color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px',
-                    borderRadius: 6, cursor: 'pointer',
-                  }}>
-                    Reportar
-                  </button>
-                  <button onClick={e => { e.stopPropagation(); setShowReport(false) }} style={{
-                    flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)',
-                    color: 'var(--text-muted)', fontSize: 11, padding: '4px 8px',
-                    borderRadius: 6, cursor: 'pointer',
-                  }}>
-                    Cancelar
-                  </button>
-                </div>
-              )}
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={handleReport} style={{
+                  flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)',
+                  color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px',
+                  borderRadius: 6, cursor: 'pointer',
+                }}>
+                  Reportar
+                </button>
+                <button onClick={e => { e.stopPropagation(); setShowReport(false) }} style={{
+                  flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)',
+                  color: 'var(--text-muted)', fontSize: 11, padding: '4px 8px',
+                  borderRadius: 6, cursor: 'pointer',
+                }}>
+                  Cancelar
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -179,7 +194,7 @@ export default function SetupCard({ setup }: { setup: Setup }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
             <div style={{
               width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-              background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
+              background: getAvatarGradient(setup.user_name),
               fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#0a0a0b',
