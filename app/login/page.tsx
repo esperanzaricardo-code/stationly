@@ -66,8 +66,8 @@ function LoginForm() {
     } catch (err: unknown) {
       // Traducir errores comunes de Supabase a español
       const msg = err instanceof Error ? err.message : 'Error desconocido'
-      if (msg.includes('Password should be at least'))
-        setError('La contraseña debe tener al menos 6 caracteres')
+      if (msg.includes('Password should contain at least one character of each') || msg.includes('Password should be at least'))
+        setError('password_requirements')
       else if (msg.includes('already registered') || msg.includes('already been registered'))
         setError('Este email ya tiene una cuenta. ¿Quieres iniciar sesión?')
       else if (msg.includes('Invalid login credentials'))
@@ -165,11 +165,22 @@ function LoginForm() {
           )}
         </div>
 
-        {error && (
+        {error === 'password_requirements' ? (
+          <div style={{ background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 13, padding: '10px 14px', borderRadius: 'var(--radius-sm)', marginBottom: 16 }}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>La contraseña debe incluir al menos:</div>
+            <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <li>Una letra minúscula (a-z)</li>
+              <li>Una letra mayúscula (A-Z)</li>
+              <li>Un número (0-9)</li>
+              <li>Un símbolo (!@#$...)</li>
+              <li>Mínimo 6 caracteres</li>
+            </ul>
+          </div>
+        ) : error ? (
           <div style={{ background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 13, padding: '10px 14px', borderRadius: 'var(--radius-sm)', marginBottom: 16 }}>
             {error}
           </div>
-        )}
+        ) : null}
         {success && (
           <div style={{ background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', color: 'var(--tag-text)', fontSize: 13, padding: '10px 14px', borderRadius: 'var(--radius-sm)', marginBottom: 16 }}>
             {success}
