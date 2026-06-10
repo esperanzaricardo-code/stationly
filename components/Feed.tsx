@@ -60,7 +60,7 @@ export default function Feed({ initialSetups }: { initialSetups: Setup[] }) {
 
     const onReported = (e: Event) => {
       const setupId = (e as CustomEvent).detail as string
-      setReportedIds(prev => new Set([...prev, setupId]))
+      setReportedIds(prev => new Set([...Array.from(prev), setupId]))
     }
     document.addEventListener('stationly:reported', onReported)
 
