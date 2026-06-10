@@ -47,11 +47,11 @@ function totalLikes(setups: Setup[]) {
   return setups.reduce((a, s) => a + (s.likes || 0), 0)
 }
 
+// ── Solo cuenta componentes, no pins ──
 function totalComponents(setups: Setup[]) {
   return setups.reduce((a, s) => {
-    const pins = (s.pins || []).filter(p => p.name && p.name.trim())
     const components = (s.components || []).filter(c => c.name && c.name.trim())
-    return a + pins.length + components.length
+    return a + components.length
   }, 0)
 }
 
@@ -68,14 +68,10 @@ type SetupDraft = {
   savedAt: number
 }
 
-function draftKey(setupId: string) {
-  return `stationly-draft-${setupId}`
-}
+function draftKey(setupId: string) { return `stationly-draft-${setupId}` }
 
 function saveDraft(setupId: string, draft: SetupDraft) {
-  try {
-    localStorage.setItem(draftKey(setupId), JSON.stringify(draft))
-  } catch {}
+  try { localStorage.setItem(draftKey(setupId), JSON.stringify(draft)) } catch {}
 }
 
 function loadDraft(setupId: string): SetupDraft | null {
@@ -83,21 +79,15 @@ function loadDraft(setupId: string): SetupDraft | null {
     const raw = localStorage.getItem(draftKey(setupId))
     if (!raw) return null
     const draft = JSON.parse(raw) as SetupDraft
-    // Borradores de más de 7 días se descartan
     if (Date.now() - (draft.savedAt || 0) > 7 * 24 * 60 * 60 * 1000) {
-      localStorage.removeItem(draftKey(setupId))
-      return null
+      localStorage.removeItem(draftKey(setupId)); return null
     }
     return draft
-  } catch {
-    return null
-  }
+  } catch { return null }
 }
 
 function clearDraft(setupId: string) {
-  try {
-    localStorage.removeItem(draftKey(setupId))
-  } catch {}
+  try { localStorage.removeItem(draftKey(setupId)) } catch {}
 }
 
 function applyAccentColor(color: AccentColor) {
@@ -134,9 +124,7 @@ function CategoryPill({ type, category }: { type: string; category?: string }) {
       background: 'var(--setup-accent-glow)', border: '1px solid var(--setup-accent)',
       color: 'var(--setup-accent)', padding: '2px 8px', borderRadius: 50,
       flexShrink: 0, whiteSpace: 'nowrap', opacity: 0.9,
-    }}>
-      {label}
-    </span>
+    }}>{label}</span>
   )
 }
 
@@ -156,6 +144,36 @@ function ProfileTag({ tag }: { tag: string }) {
     }}>
       {isFounder && '★ '}{tag}
     </span>
+  )
+}
+
+// ── Modal de registro para no registrados ──
+function RegisterPromptModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter()
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: 32, width: '100%', maxWidth: 360, textAlign: 'center', boxShadow: 'var(--shadow-lg)', animation: 'confirm-in 0.2s ease' }}>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>♥</div>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>
+          ¿Te gusta este setup?
+        </h3>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 24 }}>
+          Crea una cuenta gratis para dar likes y guardar tus setups favoritos.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button onClick={() => router.push('/login?mode=register')} className="btn-primary" style={{ width: '100%', fontSize: 14, padding: 12 }}>
+            Crear cuenta gratis
+          </button>
+          <button onClick={() => router.push('/login')} className="btn-secondary" style={{ width: '100%', fontSize: 14, padding: 12 }}>
+            Ya tengo cuenta
+          </button>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: 12, cursor: 'pointer', padding: 4 }}>
+            Ahora no
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -232,10 +250,12 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     return index >= 0 ? index : 0
   })
   const [isOwner, setIsOwner] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [sessionToken, setSessionToken] = useState('')
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showRegisterPrompt, setShowRegisterPrompt] = useState(false)
 
   // Modal editar perfil
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -298,6 +318,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       if (user) {
         const uname = user.user_metadata?.username || user.email?.split('@')[0] || ''
         setIsOwner(uname.toLowerCase() === username.toLowerCase())
+        setIsLoggedIn(true)
         setSessionToken(data.session?.access_token || '')
       }
     })
@@ -330,15 +351,9 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     if (!editing || !setup) return
     const timeout = setTimeout(() => {
       saveDraft(setup.id, {
-        title: editTitle,
-        components: editComponents,
-        pins: editPins,
-        accentColor: editAccentColor,
-        categories: editCategories,
-        componentText,
-        scanResults,
-        scanDone,
-        savedAt: Date.now(),
+        title: editTitle, components: editComponents, pins: editPins,
+        accentColor: editAccentColor, categories: editCategories,
+        componentText, scanResults, scanDone, savedAt: Date.now(),
       })
     }, 400)
     return () => clearTimeout(timeout)
@@ -347,10 +362,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   // ── Aviso del navegador al cerrar/recargar con la edición abierta ──
   useEffect(() => {
     if (!editing) return
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault()
-      e.returnValue = ''
-    }
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [editing])
@@ -376,26 +388,21 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setSavingProfile(true)
     try {
       await supabase.from('profiles').upsert({
-        username,
-        tag: profileTag ?? null,
-        role_tag: editRoleTag || null,
+        username, tag: profileTag ?? null, role_tag: editRoleTag || null,
         amazon_affiliate_id: editAmazonAffiliateId || null,
-        show_pccomponentes: editShowPcComponentes,
-        app_accent_color: editAppColor,
+        show_pccomponentes: editShowPcComponentes, app_accent_color: editAppColor,
       }, { onConflict: 'username' })
-      setRoleTag(editRoleTag)
-      setAmazonAffiliateId(editAmazonAffiliateId)
-      setShowPcComponentes(editShowPcComponentes)
-      setAppColor(editAppColor)
-      try {
-        localStorage.setItem('stationly-app-color', editAppColor)
-      } catch {}
+      setRoleTag(editRoleTag); setAmazonAffiliateId(editAmazonAffiliateId)
+      setShowPcComponentes(editShowPcComponentes); setAppColor(editAppColor)
+      try { localStorage.setItem('stationly-app-color', editAppColor) } catch {}
       setShowProfileModal(false)
     } catch {}
     setSavingProfile(false)
   }
 
   async function toggleLike(setupId: string) {
+    // Si no está registrado, mostrar popup
+    if (!isLoggedIn) { setShowRegisterPrompt(true); return }
     if (likingLoading[setupId]) return
     setLikingLoading(prev => ({ ...prev, [setupId]: true }))
     const newLiked = !liked[setupId]
@@ -403,8 +410,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setLikes(prev => ({ ...prev, [setupId]: (prev[setupId] || 0) + (newLiked ? 1 : -1) }))
     try {
       const res = await fetch('/api/likes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: setupId, action: newLiked ? 'like' : 'unlike' }),
       })
       const data = await res.json()
@@ -421,13 +427,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     if (reported[setupId]) return
     try {
       await fetch('/api/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: setupId, user: userName }),
       })
     } catch {}
     setReported(prev => ({ ...prev, [setupId]: true }))
     setShowReport(prev => ({ ...prev, [setupId]: false }))
+    toastInfo('Setup reportado. Gracias por ayudarnos a mantener la comunidad.')
   }
 
   function toggleEditCategory(cat: string) {
@@ -441,7 +447,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
 
   function startEditing() {
     const draft = loadDraft(setup.id)
-
     if (draft) {
       setEditTitle(draft.title)
       setEditComponents(draft.components || [])
@@ -456,19 +461,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       setEditTitle(setup.title)
       setEditComponents(setup.components ? setup.components.map(c => ({ ...c, links: c.links || [] })) : [])
       setEditPins(setup.pins || [])
-      setComponentText('')
-      setScanResults([])
-      setScanDone(false)
+      setComponentText(''); setScanResults([]); setScanDone(false)
       setEditAccentColor((setup.accent_color || 'lime') as AccentColor)
       setEditCategories(setup.category ? setup.category.split(', ') : ['Gaming', 'Streaming'])
       setDraftRestored(false)
     }
-    setNewImageFile(null)
-    setNewImagePreview(null)
-    setRawImagePreview(null)
-    setShowCropper(false)
-    setShowAdvanced(false)
-    setEditing(true)
+    setNewImageFile(null); setNewImagePreview(null); setRawImagePreview(null)
+    setShowCropper(false); setShowAdvanced(false); setEditing(true)
   }
 
   function discardDraft() {
@@ -476,27 +475,17 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setEditTitle(setup.title)
     setEditComponents(setup.components ? setup.components.map(c => ({ ...c, links: c.links || [] })) : [])
     setEditPins(setup.pins || [])
-    setComponentText('')
-    setScanResults([])
-    setScanDone(false)
+    setComponentText(''); setScanResults([]); setScanDone(false)
     setEditAccentColor((setup.accent_color || 'lime') as AccentColor)
-    setEditingIndex(null)
-    setDraftRestored(false)
+    setEditingIndex(null); setDraftRestored(false)
   }
 
   function cancelEditing() {
     applyAccentColor((setup.accent_color || 'lime') as AccentColor)
-    setPreviewAccent(null)
-    setEditing(false)
-    setNewImageFile(null)
-    setNewImagePreview(null)
-    setRawImagePreview(null)
-    setShowCropper(false)
-    setScanResults([])
-    setScanDone(false)
-    setShowAdvanced(false)
-    setEditingIndex(null)
-    setDraftRestored(false)
+    setPreviewAccent(null); setEditing(false)
+    setNewImageFile(null); setNewImagePreview(null); setRawImagePreview(null)
+    setShowCropper(false); setScanResults([]); setScanDone(false)
+    setShowAdvanced(false); setEditingIndex(null); setDraftRestored(false)
   }
 
   function handleImageFile(file: File) {
@@ -574,9 +563,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     const ok = await confirm({
       title: '¿Eliminar este setup?',
       message: 'Esta acción no se puede deshacer. El setup y su imagen se eliminarán permanentemente.',
-      confirmLabel: 'Sí, eliminar',
-      cancelLabel: 'Cancelar',
-      danger: true,
+      confirmLabel: 'Sí, eliminar', cancelLabel: 'Cancelar', danger: true,
     })
     if (!ok) return
     setSaving(true)
@@ -597,8 +584,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       const ok = await confirm({
         title: 'Componentes sin confirmar',
         message: `Tienes ${scanResults.length} componente${scanResults.length !== 1 ? 's' : ''} sin confirmar. ¿Los añadimos todos antes de guardar?`,
-        confirmLabel: 'Sí, añadir todos',
-        cancelLabel: 'Volver',
+        confirmLabel: 'Sí, añadir todos', cancelLabel: 'Volver',
       })
       if (ok) { acceptAll(); return }
       else return
@@ -620,12 +606,10 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         }
       }
       const updates = {
-        title: editTitle,
-        category: editCategories.join(', '),
+        title: editTitle, category: editCategories.join(', '),
         components: editComponents.filter(c => c.name.trim()),
         pins: editPins.filter(p => p.name.trim()),
-        image_url,
-        accent_color: editAccentColor,
+        image_url, accent_color: editAccentColor,
       }
       const res = await fetch('/api/setups', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ setupId: setup.id, sessionToken, updates }) })
       const data = await res.json()
@@ -634,7 +618,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       setSetups(prev => prev.map((s, i) => i === activeSetup ? { ...s, ...updates, image_url: image_url ?? s.image_url } : s))
       applyAccentColor(editAccentColor)
       toastSuccess('¡Setup guardado!')
-      setEditing(false); setNewImageFile(null); setNewImagePreview(null); setRawImagePreview(null); setShowCropper(false); setScanResults([]); setScanDone(false); setDraftRestored(false); setPreviewAccent(null)
+      setEditing(false); setNewImageFile(null); setNewImagePreview(null); setRawImagePreview(null)
+      setShowCropper(false); setScanResults([]); setScanDone(false); setDraftRestored(false); setPreviewAccent(null)
     } catch (err: unknown) { toastError(err instanceof Error ? err.message : 'Error al guardar') }
     finally { setSaving(false) }
   }
@@ -677,16 +662,16 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   return (
     <div data-setup-color={currentAccent} style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
 
+      {/* ── Modal registro para no registrados ── */}
+      {showRegisterPrompt && <RegisterPromptModal onClose={() => setShowRegisterPrompt(false)} />}
+
       {/* ── Modal Editar Perfil ── */}
       {showProfileModal && (
         <div onClick={e => { if (e.target === e.currentTarget) setShowProfileModal(false) }}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 24, width: '100%', maxWidth: 480, padding: 32, position: 'relative', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
             <button onClick={() => setShowProfileModal(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', width: 32, height: 32, borderRadius: '50%', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text)', marginBottom: 24 }}>Editar perfil</h2>
-
-            {/* Tag */}
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Tu tag</label>
               {profileTag === 'Founder' && (
@@ -706,40 +691,25 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                   }}>{t}</button>
                 ))}
                 {editRoleTag && (
-                  <button onClick={() => setEditRoleTag('')} style={{ padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>
-                    Sin tag
-                  </button>
+                  <button onClick={() => setEditRoleTag('')} style={{ padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>Sin tag</button>
                 )}
               </div>
             </div>
-
-            {/* Color de la app */}
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color de la app</label>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {ACCENT_COLORS.map(color => (
                   <button key={color.id} onClick={() => setEditAppColor(color.id)} title={color.label}
-                    style={{
-                      width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', border: 'none',
-                      background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
-                      outline: editAppColor === color.id ? `3px solid ${color.from}` : '3px solid transparent',
-                      outlineOffset: 2,
-                      boxShadow: editAppColor === color.id ? `0 0 10px ${color.from}88` : 'none',
-                      transition: 'all 0.18s',
-                    }}
+                    style={{ width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', border: 'none', background: `linear-gradient(135deg, ${color.from}, ${color.to})`, outline: editAppColor === color.id ? `3px solid ${color.from}` : '3px solid transparent', outlineOffset: 2, boxShadow: editAppColor === color.id ? `0 0 10px ${color.from}88` : 'none', transition: 'all 0.18s' }}
                   />
                 ))}
               </div>
             </div>
-
-            {/* ID afiliado */}
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>ID de afiliado Amazon</label>
               <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Si tienes cuenta en Amazon Associates, pega aquí tu ID (ej: tunombre-21).</p>
               <input value={editAmazonAffiliateId} onChange={e => setEditAmazonAffiliateId(e.target.value)} placeholder="ej: tunombre-21" style={inputStyle} />
             </div>
-
-            {/* PcComponentes toggle */}
             <div style={{ marginBottom: 28 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Links de tiendas</label>
               <button onClick={() => setEditShowPcComponentes(v => !v)}
@@ -753,7 +723,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                 </div>
               </button>
             </div>
-
             <button onClick={saveProfileModal} disabled={savingProfile} className="btn-primary" style={{ width: '100%', fontSize: 14, padding: 13, opacity: savingProfile ? 0.6 : 1 }}>
               {savingProfile ? '⏳ Guardando...' : '✓ Guardar perfil'}
             </button>
@@ -823,8 +792,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
               💾 Borrador guardado automáticamente{draftRestored ? ' · Borrador recuperado' : ''}
             </span>
             {draftRestored && (
-              <button onClick={discardDraft}
-                style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 50, cursor: 'pointer' }}>
+              <button onClick={discardDraft} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 50, cursor: 'pointer' }}>
                 ↺ Descartar y empezar de cero
               </button>
             )}
@@ -836,14 +804,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {ACCENT_COLORS.map(color => (
                 <button key={color.id} onClick={() => { setEditAccentColor(color.id); setPreviewAccent(color.id as AccentColor); applyAccentColor(color.id as AccentColor) }} title={color.label}
-                  style={{
-                    width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', border: 'none',
-                    background: `linear-gradient(135deg, ${color.from}, ${color.to})`,
-                    outline: editAccentColor === color.id ? `3px solid ${color.from}` : '3px solid transparent',
-                    outlineOffset: 2,
-                    boxShadow: editAccentColor === color.id ? `0 0 12px ${color.from}88` : 'none',
-                    transition: 'all 0.18s',
-                  }}
+                  style={{ width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', border: 'none', background: `linear-gradient(135deg, ${color.from}, ${color.to})`, outline: editAccentColor === color.id ? `3px solid ${color.from}` : '3px solid transparent', outlineOffset: 2, boxShadow: editAccentColor === color.id ? `0 0 12px ${color.from}88` : 'none', transition: 'all 0.18s' }}
                 />
               ))}
             </div>
@@ -865,17 +826,14 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                 const active = editCategories.includes(cat)
                 return (
                   <button key={cat} onClick={() => toggleEditCategory(cat)} style={{
-                    padding: '7px 16px', borderRadius: 50,
-                    cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                    padding: '7px 16px', borderRadius: 50, cursor: 'pointer', fontSize: 13, fontWeight: 600,
                     fontFamily: 'var(--font-display)',
                     background: active ? 'linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))' : 'var(--surface2)',
                     border: active ? 'none' : '1px solid var(--border)',
                     color: active ? '#0a0a0b' : 'var(--text-muted)',
                     transition: 'all 0.18s',
                     boxShadow: active ? '0 0 10px var(--setup-accent-glow)' : 'none',
-                  }}>
-                    {cat}
-                  </button>
+                  }}>{cat}</button>
                 )
               })}
             </div>
@@ -1032,7 +990,9 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
               <div>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px' }}>{setup.title}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{setup.category} · {(setup.pins?.filter(p => p.name).length || 0) + (setup.components?.length || 0)} componentes</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                  {setup.category} · {setup.components?.filter(c => c.name?.trim()).length || 0} componentes
+                </div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {!isOwner && (
@@ -1042,13 +1002,11 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
                         style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', width: 36, height: 36, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚑</button>
                     ) : (
                       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140, position: 'absolute', right: 0, top: 40, zIndex: 10 }}>
-                        <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>{reported[setup.id] ? '✓ Reportado' : '¿Reportar este setup?'}</span>
-                        {!reported[setup.id] && (
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button onClick={() => handleReport(setup.id, setup.user_name)} style={{ flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Reportar</button>
-                            <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: false }))} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Cancelar</button>
-                          </div>
-                        )}
+                        <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>¿Reportar este setup?</span>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => handleReport(setup.id, setup.user_name)} style={{ flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Reportar</button>
+                          <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: false }))} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Cancelar</button>
+                        </div>
                       </div>
                     )}
                   </div>
