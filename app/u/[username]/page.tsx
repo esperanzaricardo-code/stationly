@@ -4,6 +4,8 @@ import AnimatedBackground from '@/components/AnimatedBackground'
 import Nav from '@/components/Nav'
 import UserProfile from '@/components/UserProfile'
 import UploadModal from '@/components/UploadModal'
+import Toast from '@/components/Toast'
+import ConfirmModal from '@/components/ConfirmModal'
 
 export const revalidate = 0
 
@@ -27,13 +29,14 @@ export default async function UserPage({
 }) {
   const username = decodeURIComponent(params.username)
   const setups = await getUserSetups(params.username)
-
   return (
     <ThemeProvider>
       <AnimatedBackground />
       <Nav />
       <UserProfile setups={setups} username={username} activeSetupId={searchParams.setup} />
       <UploadModal />
+      <Toast />
+      <ConfirmModal />
     </ThemeProvider>
   )
 }
