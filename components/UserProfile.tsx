@@ -365,8 +365,15 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       })
 
     const onNewSetup = (e: Event) => {
-      const setup = (e as CustomEvent).detail
-      setSetups(prev => [setup, ...prev])
+      const newSetup = (e as CustomEvent).detail
+      setSetups(prev => [newSetup, ...prev])
+      // Si el editor está abierto, cerrarlo para que no se mezclen los componentes
+      setEditing(false)
+      setEditComponents([])
+      setEditPins([])
+      setScanResults([])
+      setComponentText('')
+      setPreviewAccent(null)
     }
     document.addEventListener('stationly:new-setup', onNewSetup)
     return () => document.removeEventListener('stationly:new-setup', onNewSetup)
