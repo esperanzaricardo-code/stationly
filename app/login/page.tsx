@@ -115,8 +115,13 @@ function LoginForm() {
         })
         if (error) throw error
 
-        // Llamar a la función RPC para asignar Founder si es elegible
-        const { data: isFounder } = await supabase.rpc('assign_founder_if_eligible', { p_username: username })
+        // Llamar a la API para asignar Founder si es elegible
+        const founderRes = await fetch('/api/founder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username }),
+        })
+        const { isFounder } = await founderRes.json()
         setWelcomeModal({ show: true, isFounder: !!isFounder })
       }
     } catch (err: unknown) {
