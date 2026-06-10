@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 
 export const REPORT_REASONS = [
   { id: 'inappropriate', label: 'Contenido inapropiado' },
@@ -13,11 +14,8 @@ type Props = {
   onCancel: () => void
 }
 
-import { useState } from 'react'
-
 export default function ReportModal({ onConfirm, onCancel }: Props) {
   const [selected, setSelected] = useState('')
-
   return (
     <div
       onClick={e => { if (e.target === e.currentTarget) onCancel() }}
@@ -30,7 +28,6 @@ export default function ReportModal({ onConfirm, onCancel }: Props) {
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
           ¿Por qué quieres reportar este setup? No se lo diremos al autor.
         </p>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
           {REPORT_REASONS.map(r => (
             <button
@@ -50,7 +47,6 @@ export default function ReportModal({ onConfirm, onCancel }: Props) {
             </button>
           ))}
         </div>
-
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onCancel} className="btn-secondary" style={{ flex: 1, fontSize: 13, padding: '11px 0' }}>
             Cancelar
