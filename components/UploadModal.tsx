@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import ImageCropper from './ImageCropper'
 import { supabase } from '@/lib/supabase'
 
+const CATEGORIES = ['Gaming', 'Streaming', 'Workstation', 'Minimal', 'RGB']
+
 export default function UploadModal() {
   const [open, setOpen] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -13,6 +15,7 @@ export default function UploadModal() {
   const [userName, setUserName] = useState('')
   const [sessionToken, setSessionToken] = useState('')
   const [title, setTitle] = useState('')
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['Gaming', 'Streaming'])
   const [submitting, setSubmitting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -31,6 +34,17 @@ export default function UploadModal() {
       }
     })
   }, [])
+
+  function toggleCategory(cat: string) {
+    setSelectedCategories(prev => {
+      const isSelected = prev.includes(cat)
+      // Mínimo 1 siempre activa
+      if (isSelected && prev.length === 1) return prev
+      // Máximo 2
+      if (!isSelected && prev.length >= 2) return [prev[1], cat]
+      return isSelected ? prev.filter(c => c !== cat) : [...prev, cat]
+    })
+  }
 
   function handleFile(file: File) {
     if (!file.type.startsWith('image/')) return
@@ -66,6 +80,7 @@ export default function UploadModal() {
   function closeModal() {
     setOpen(false); clearImage()
     setTitle(''); setSubmitting(false)
+    setSelectedCategories(['Gaming', 'Streaming'])
   }
 
   async function submitSetup() {
@@ -77,7 +92,7 @@ export default function UploadModal() {
       fd.append('user_name', userName.trim())
       fd.append('session_token', sessionToken)
       fd.append('title', title.trim())
-      fd.append('category', 'workstation')
+      fd.append('category', selectedCategories.join(', '))
       fd.append('tags', JSON.stringify([]))
 
       if (croppedPreview) {
@@ -137,9 +152,9 @@ export default function UploadModal() {
         {/* Drop zone */}
         {!rawPreview && !croppedPreview && (
           <div
-            onDragOver={e => { e.preventDefault() }}
-            onDragLeave={() => {}}
-            onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
+            onDragOver={e => { e.preventDefault(); setDragover(true) }}
+            onDragLeave={() => setDragover(false)}
+            onDrop={e => { e.preventDefault(); setDragover(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
             onClick={() => fileRef.current?.click()}
             style={{ border: `2px dashed ${dragover ? 'var(--accent)' : 'var(--border-strong)'}`, borderRadius: 'var(--radius)', background: 'var(--surface2)', padding: '36px 24px', textAlign: 'center', cursor: 'pointer', marginBottom: 20, transition: 'all 0.2s' }}>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
@@ -167,10 +182,10 @@ export default function UploadModal() {
           </div>
         )}
 
-        {/* Título */}
+        {/* Título + Categoría */}
         {!showCropper && (
           <>
-            <div style={{ marginBottom: 14 }}>
+            <div style={{ marginBottom: 20 }}>
               <label style={labelStyle}>Nombre del Setup</label>
               <input
                 value={title}
@@ -179,6 +194,35 @@ export default function UploadModal() {
                 style={inputStyle}
                 onKeyDown={e => e.key === 'Enter' && submitSetup()}
               />
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>
+                Categorías <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-dim)', fontSize: 10 }}>— elige hasta 2</span>
+              </label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {CATEGORIES.map(cat => {
+                  const active = selectedCategories.includes(cat)
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => toggleCategory(cat)}
+                      style={{
+                        padding: '7px 16px', borderRadius: 50,
+                        cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                        fontFamily: 'var(--font-display)',
+                        background: active ? 'linear-gradient(135deg, var(--accent), var(--accent2))' : 'var(--surface2)',
+                        border: active ? 'none' : '1px solid var(--border)',
+                        color: active ? '#0a0a0b' : 'var(--text-muted)',
+                        transition: 'all 0.18s',
+                        boxShadow: active ? '0 0 10px var(--accent-glow)' : 'none',
+                      }}
+                    >
+                      {cat}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16, lineHeight: 1.5 }}>
