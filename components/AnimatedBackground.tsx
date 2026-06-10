@@ -24,6 +24,8 @@ function getSetupAccentRGB(): string {
       'red':    '248,113,113',
       'cyan':   '34,211,238',
       'yellow': '253,224,71',
+      'mint':   '45,212,191',
+      'indigo': '129,140,248',
     }
     return map[color || 'lime'] || '207,250,124'
   }
@@ -37,6 +39,8 @@ function getSetupAccentRGB(): string {
     '#f87171': '248,113,113',
     '#22d3ee': '34,211,238',
     '#fde047': '253,224,71',
+    '#2dd4bf': '45,212,191',
+    '#818cf8': '129,140,248',
   }
   return map[accent] || '207,250,124'
 }
