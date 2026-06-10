@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import PinEditor from './PinEditor'
 import ImageCropper from './ImageCropper'
 
+const CATEGORIES = ['Gaming', 'Streaming', 'Workstation', 'Minimal', 'RGB']
 const TAGS = ['Gamer', 'Streamer', 'Developer', 'Content Creator']
 
 const TAG_STYLES: Record<string, { bg: string; border: string; color: string }> = {
@@ -58,6 +59,7 @@ type SetupDraft = {
   components: Component[]
   pins: Pin[]
   accentColor: AccentColor
+  categories: string[]
   componentText: string
   scanResults: Component[]
   scanDone: boolean
@@ -253,6 +255,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   // Edición del setup
   const [editAccentColor, setEditAccentColor] = useState<AccentColor>('lime')
   const [editTitle, setEditTitle] = useState('')
+  const [editCategories, setEditCategories] = useState<string[]>(['Gaming', 'Streaming'])
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null)
   const [rawImagePreview, setRawImagePreview] = useState<string | null>(null)
@@ -328,6 +331,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         components: editComponents,
         pins: editPins,
         accentColor: editAccentColor,
+        categories: editCategories,
         componentText,
         scanResults,
         scanDone,
@@ -422,6 +426,15 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     setShowReport(prev => ({ ...prev, [setupId]: false }))
   }
 
+  function toggleEditCategory(cat: string) {
+    setEditCategories(prev => {
+      const isSelected = prev.includes(cat)
+      if (isSelected && prev.length === 1) return prev
+      if (!isSelected && prev.length >= 2) return [prev[1], cat]
+      return isSelected ? prev.filter(c => c !== cat) : [...prev, cat]
+    })
+  }
+
   function startEditing() {
     const draft = loadDraft(setup.id)
 
@@ -430,6 +443,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       setEditComponents(draft.components || [])
       setEditPins(draft.pins || [])
       setEditAccentColor(draft.accentColor || (setup.accent_color || 'lime') as AccentColor)
+      setEditCategories(draft.categories || (setup.category ? setup.category.split(', ') : ['Gaming', 'Streaming']))
       setComponentText(draft.componentText || '')
       setScanResults(draft.scanResults || [])
       setScanDone(draft.scanDone || false)
@@ -442,6 +456,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       setScanResults([])
       setScanDone(false)
       setEditAccentColor((setup.accent_color || 'lime') as AccentColor)
+      setEditCategories(setup.category ? setup.category.split(', ') : ['Gaming', 'Streaming'])
       setDraftRestored(false)
     }
     setNewImageFile(null)
@@ -586,6 +601,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       }
       const updates = {
         title: editTitle,
+        category: editCategories.join(', '),
         components: editComponents.filter(c => c.name.trim()),
         pins: editPins.filter(p => p.name.trim()),
         image_url,
@@ -816,6 +832,32 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Título del Setup</label>
             <input value={editTitle} onChange={e => setEditTitle(e.target.value)} style={inputStyle} />
+          </div>
+
+          {/* Categorías */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>
+              Categorías <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-dim)', fontSize: 10 }}>— elige hasta 2</span>
+            </label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {CATEGORIES.map(cat => {
+                const active = editCategories.includes(cat)
+                return (
+                  <button key={cat} onClick={() => toggleEditCategory(cat)} style={{
+                    padding: '7px 16px', borderRadius: 50,
+                    cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                    fontFamily: 'var(--font-display)',
+                    background: active ? 'linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))' : 'var(--surface2)',
+                    border: active ? 'none' : '1px solid var(--border)',
+                    color: active ? '#0a0a0b' : 'var(--text-muted)',
+                    transition: 'all 0.18s',
+                    boxShadow: active ? '0 0 10px var(--setup-accent-glow)' : 'none',
+                  }}>
+                    {cat}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Foto */}
