@@ -58,20 +58,21 @@ export default function SetupCard({ setup }: { setup: Setup }) {
       supabase.auth.getSession().then(({ data }) => {
         const user = data.session?.user
         if (user) {
+          const token = data.session?.access_token || ''
           setIsLoggedIn(true)
-          setSessionToken(data.session?.access_token || '')
+          setSessionToken(token)
           const uname = user.user_metadata?.username || user.email?.split('@')[0] || ''
           setCurrentUser(uname)
 
-          // Cargar si ya reportó este setup
-          supabase.from('reports')
-            .select('id')
-            .eq('setup_id', setup.id)
-            .eq('user_name', uname)
-            .single()
-            .then(({ data: existing }) => {
-              if (existing) setReported(true)
+          // Cargar si ya reportó este setup via API
+          fetch('/api/reports', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+            .then(r => r.json())
+            .then(({ reportedIds }) => {
+              if (reportedIds?.includes(setup.id)) setReported(true)
             })
+            .catch(() => {})
         }
       })
     })
