@@ -329,6 +329,22 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         setIsOwner(uname.toLowerCase() === username.toLowerCase())
         setIsLoggedIn(true)
         setSessionToken(data.session?.access_token || '')
+
+        // Cargar reportes previos del usuario para estos setups
+        const setupIds = initialSetups.map(s => s.id)
+        if (setupIds.length > 0) {
+          supabase.from('reports')
+            .select('setup_id')
+            .eq('user_name', uname)
+            .in('setup_id', setupIds)
+            .then(({ data: reportData }) => {
+              if (reportData && reportData.length > 0) {
+                const alreadyReported: Record<string, boolean> = {}
+                reportData.forEach(r => { alreadyReported[r.setup_id] = true })
+                setReported(alreadyReported)
+              }
+            })
+        }
       }
     })
     const initialLikes: Record<string, number> = {}
@@ -1006,7 +1022,11 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
               <div style={{ display: 'flex', gap: 8 }}>
                 {!isOwner && !reported[setup.id] && (
                   <div style={{ position: 'relative' }}>
-                    <button onClick={(e) => { e.stopPropagation(); setShowReport(prev => ({ ...prev, [setup.id]: !prev[setup.id] })) }}
+                    <button onClick={(e) => {
+                      e.stopPropagation()
+                      if (!isLoggedIn) { setShowRegisterPrompt(true); return }
+                      setShowReport(prev => ({ ...prev, [setup.id]: !prev[setup.id] }))
+                    }}
                       style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', width: 36, height: 36, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚑</button>
                     {showReport[setup.id] && (
                       <div onClick={e => e.stopPropagation()}
