@@ -5,8 +5,10 @@ import Nav from '@/components/Nav'
 import Filters from '@/components/Filters'
 import Feed from '@/components/Feed'
 import UploadModal from '@/components/UploadModal'
+import Toast from '@/components/Toast'
 
 export const revalidate = 0
+export const dynamic = 'force-dynamic'
 
 async function getSetups(): Promise<Setup[]> {
   const { data, error } = await supabase
@@ -46,6 +48,7 @@ export default async function FeedPage() {
         <Feed initialSetups={setups} />
       </div>
       <UploadModal />
+      <Toast />
     </ThemeProvider>
   )
 }
