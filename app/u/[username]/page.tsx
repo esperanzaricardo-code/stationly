@@ -8,6 +8,7 @@ import Toast from '@/components/Toast'
 import ConfirmModal from '@/components/ConfirmModal'
 
 export const revalidate = 0
+export const dynamic = 'force-dynamic'
 
 async function getUserSetups(username: string): Promise<Setup[]> {
   const decoded = decodeURIComponent(username)
