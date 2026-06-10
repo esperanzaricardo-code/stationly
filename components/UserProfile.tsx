@@ -5,6 +5,8 @@ import { Setup, Component, ShopLink, Pin, AccentColor, ACCENT_COLORS } from '@/l
 import { supabase } from '@/lib/supabase'
 import PinEditor from './PinEditor'
 import ImageCropper from './ImageCropper'
+import { toastSuccess, toastError, toastInfo } from './Toast'
+import { confirm } from './ConfirmModal'
 
 const CATEGORIES = ['Gaming', 'Streaming', 'Workstation', 'Minimal', 'RGB']
 const TAGS = ['Gamer', 'Streamer', 'Developer', 'Content Creator']
@@ -498,7 +500,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
 
   function handleImageFile(file: File) {
     if (!file.type.startsWith('image/')) return
-    if (file.size > 10 * 1024 * 1024) { alert('Máximo 10MB'); return }
+    if (file.size > 10 * 1024 * 1024) { toastError('La imagen no puede superar 10MB'); return }
     setNewImageFile(file)
     const reader = new FileReader()
     reader.onload = e => { setRawImagePreview(e.target?.result as string); setShowCropper(true) }
@@ -516,7 +518,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setScanResults(data.components); setScanDone(true)
-    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error al analizar') }
+    } catch (err: unknown) { toastError(err instanceof Error ? err.message : 'Error al analizar') }
     finally { setScanning(false) }
   }
 
@@ -534,7 +536,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         setScanResults(prev => [...prev, ...data.components]); setScanDone(true); setPhotoScanning(false)
       }
       reader.readAsDataURL(file)
-    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error al identificar'); setPhotoScanning(false) }
+    } catch (err: unknown) { toastError(err instanceof Error ? err.message : 'Error al identificar'); setPhotoScanning(false) }
   }
 
   function acceptComponent(comp: Component) {
@@ -568,7 +570,14 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   }
 
   async function deleteSetup() {
-    if (!window.confirm('¿Seguro que quieres eliminar este setup? Esta acción no se puede deshacer.')) return
+    const ok = await confirm({
+      title: '¿Eliminar este setup?',
+      message: 'Esta acción no se puede deshacer. El setup y su imagen se eliminarán permanentemente.',
+      confirmLabel: 'Sí, eliminar',
+      cancelLabel: 'Cancelar',
+      danger: true,
+    })
+    if (!ok) return
     setSaving(true)
     try {
       const res = await fetch('/api/setups', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ setupId: setup.id, sessionToken }) })
@@ -577,14 +586,21 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       clearDraft(setup.id)
       const newSetups = setups.filter(s => s.id !== setup.id)
       setSetups(newSetups); setActiveSetup(0); setEditing(false)
-    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error al eliminar') }
+      toastSuccess('Setup eliminado')
+    } catch (err: unknown) { toastError(err instanceof Error ? err.message : 'Error al eliminar') }
     finally { setSaving(false) }
   }
 
   async function saveChanges() {
     if (scanResults.length > 0) {
-      const confirm = window.confirm(`Tienes ${scanResults.length} componente${scanResults.length !== 1 ? 's' : ''} sin confirmar. ¿Añadirlos todos?`)
-      if (confirm) { acceptAll(); return }
+      const ok = await confirm({
+        title: 'Componentes sin confirmar',
+        message: `Tienes ${scanResults.length} componente${scanResults.length !== 1 ? 's' : ''} sin confirmar. ¿Los añadimos todos antes de guardar?`,
+        confirmLabel: 'Sí, añadir todos',
+        cancelLabel: 'Volver',
+      })
+      if (ok) { acceptAll(); return }
+      else return
     }
     setSaving(true)
     try {
@@ -616,12 +632,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       clearDraft(setup.id)
       setSetups(prev => prev.map((s, i) => i === activeSetup ? { ...s, ...updates, image_url: image_url ?? s.image_url } : s))
       applyAccentColor(editAccentColor)
+      toastSuccess('¡Setup guardado!')
       setEditing(false); setNewImageFile(null); setNewImagePreview(null); setRawImagePreview(null); setShowCropper(false); setScanResults([]); setScanDone(false); setDraftRestored(false); setPreviewAccent(null)
-    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error al guardar') }
+    } catch (err: unknown) { toastError(err instanceof Error ? err.message : 'Error al guardar') }
     finally { setSaving(false) }
   }
 
-  function copyLink() { navigator.clipboard.writeText(window.location.href); alert('¡Link copiado!') }
+  function copyLink() { navigator.clipboard.writeText(window.location.href); toastInfo('¡Link copiado!') }
 
   const inputStyle = {
     background: 'var(--surface2)', border: '1px solid var(--border)',
