@@ -997,17 +997,20 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
               <div style={{ display: 'flex', gap: 8 }}>
                 {!isOwner && (
                   <div style={{ position: 'relative' }}>
-                    {!showReport[setup.id] ? (
-                      <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: true }))}
-                        style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', width: 36, height: 36, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚑</button>
-                    ) : (
-                      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140, position: 'absolute', right: 0, top: 40, zIndex: 10 }}>
-                        <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>¿Reportar este setup?</span>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={() => handleReport(setup.id, setup.user_name)} style={{ flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Reportar</button>
-                          <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: false }))} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Cancelar</button>
+                    <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: !prev[setup.id] }))}
+                      style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', width: 36, height: 36, borderRadius: '50%', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚑</button>
+                    {showReport[setup.id] && (
+                      <>
+                        <div onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: false }))}
+                          style={{ position: 'fixed', inset: 0, zIndex: 9 }} />
+                        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140, position: 'absolute', right: 0, top: 40, zIndex: 10 }}>
+                          <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)' }}>¿Reportar este setup?</span>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button onClick={() => handleReport(setup.id, setup.user_name)} style={{ flex: 1, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Reportar</button>
+                            <button onClick={() => setShowReport(prev => ({ ...prev, [setup.id]: false }))} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>Cancelar</button>
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
                 )}
