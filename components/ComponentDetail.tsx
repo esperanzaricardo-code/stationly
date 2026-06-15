@@ -55,7 +55,7 @@ export default function ComponentDetail({ component, setups }: { component: Comp
           display: 'inline-flex', alignItems: 'center', gap: 6,
           fontSize: 13, color: 'var(--text-muted)', textDecoration: 'none', marginBottom: 16,
         }}>
-          &lt;- Volver al indice
+          &#8592; Volver al indice
         </Link>
 
         <div style={{
@@ -85,7 +85,7 @@ export default function ComponentDetail({ component, setups }: { component: Comp
           </div>
 
           <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-            
+            <a
               href={makeAmazonLink(component.display_name)}
               target="_blank" rel="noopener noreferrer"
               style={{
@@ -94,9 +94,9 @@ export default function ComponentDetail({ component, setups }: { component: Comp
                 padding: '9px 18px', borderRadius: 50, textDecoration: 'none',
               }}
             >
-              Amazon -&gt;
+              Amazon &#8594;
             </a>
-            
+            <a
               href={makePcComponentesLink(component.display_name)}
               target="_blank" rel="noopener noreferrer"
               style={{
@@ -105,7 +105,7 @@ export default function ComponentDetail({ component, setups }: { component: Comp
                 padding: '9px 18px', borderRadius: 50, textDecoration: 'none',
               }}
             >
-              PcComponentes -&gt;
+              PcComponentes &#8594;
             </a>
           </div>
         </div>
