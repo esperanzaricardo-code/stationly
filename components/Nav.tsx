@@ -200,7 +200,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
                     fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
                     marginBottom: 8, background: 'var(--surface2)',
                   }}>
-                    <span style={{ fontSize: 15 }}>👤</span> Ver perfil
+                    Ver perfil
                   </Link>
 
                   <div style={{ height: 1, background: 'var(--border)', margin: '4px 0 12px' }} />
@@ -218,7 +218,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
                           cursor: 'pointer', transition: 'all 0.18s',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                         }}>
-                          {t === 'dark' ? '🌙 Oscuro' : '☀️ Claro'}
+                          {t === 'dark' ? 'Oscuro' : 'Claro'}
                         </button>
                       ))}
                     </div>
@@ -256,7 +256,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
                     color: 'var(--text-muted)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600,
                     textAlign: 'left',
                   }}>
-                    <span style={{ fontSize: 15 }}>🚪</span> Salir
+                    Salir
                   </button>
                 </div>
               )}
