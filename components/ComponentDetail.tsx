@@ -5,28 +5,28 @@ import SetupCard from './SetupCard'
 const STATIONLY_AFFILIATE_ID = process.env.NEXT_PUBLIC_AMAZON_AFFILIATE_ID || 'stationly-21'
 
 const CATEGORY_ICONS: Record<string, string> = {
-  'GPU': '🎮',
-  'CPU': '🧠',
-  'RAM': '🧩',
-  'Placa Base': '🔌',
-  'Almacenamiento': '💾',
-  'Fuente de Alimentación': '⚡',
-  'Caja': '🖥️',
-  'Refrigeración': '❄️',
-  'Monitor': '🖼️',
-  'Teclado': '⌨️',
-  'Ratón': '🖱️',
-  'Audio': '🎧',
-  'Micrófono': '🎙️',
-  'Webcam': '📷',
-  'Silla': '💺',
-  'Escritorio': '🛠️',
-  'Mousepad': '🟪',
+  'GPU': 'GPU',
+  'CPU': 'CPU',
+  'RAM': 'RAM',
+  'Placa Base': 'MB',
+  'Almacenamiento': 'SSD',
+  'Fuente de Alimentación': 'PSU',
+  'Caja': 'PC',
+  'Refrigeración': 'FAN',
+  'Monitor': 'MON',
+  'Teclado': 'KB',
+  'Ratón': 'M',
+  'Audio': 'AUD',
+  'Micrófono': 'MIC',
+  'Webcam': 'CAM',
+  'Silla': 'CH',
+  'Escritorio': 'DSK',
+  'Mousepad': 'PAD',
 }
 
 function getIcon(category: string | null): string {
-  if (!category) return '❔'
-  return CATEGORY_ICONS[category] || '❔'
+  if (!category) return '?'
+  return CATEGORY_ICONS[category] || '?'
 }
 
 function makeAmazonLink(name: string): string {
@@ -55,7 +55,7 @@ export default function ComponentDetail({ component, setups }: { component: Comp
           display: 'inline-flex', alignItems: 'center', gap: 6,
           fontSize: 13, color: 'var(--text-muted)', textDecoration: 'none', marginBottom: 16,
         }}>
-          ← Volver al índice
+          &lt;- Volver al indice
         </Link>
 
         <div style={{
@@ -67,7 +67,7 @@ export default function ComponentDetail({ component, setups }: { component: Comp
             flexShrink: 0, width: 56, height: 56, borderRadius: 'var(--radius-sm)',
             background: 'var(--surface2)', border: '1px solid var(--border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 28,
+            fontSize: 13, fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-muted)',
           }}>
             {getIcon(component.category)}
           </div>
@@ -80,7 +80,7 @@ export default function ComponentDetail({ component, setups }: { component: Comp
               {component.display_name}
             </h1>
             <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              {component.category || 'Sin categoría'} · usado en {component.setup_count} setup{component.setup_count !== 1 ? 's' : ''}
+              {component.category || 'Sin categoría'} - usado en {component.setup_count} setup{component.setup_count !== 1 ? 's' : ''}
             </div>
           </div>
 
@@ -94,7 +94,7 @@ export default function ComponentDetail({ component, setups }: { component: Comp
                 padding: '9px 18px', borderRadius: 50, textDecoration: 'none',
               }}
             >
-              Amazon →
+              Amazon -&gt;
             </a>
             
               href={makePcComponentesLink(component.display_name)}
@@ -105,7 +105,7 @@ export default function ComponentDetail({ component, setups }: { component: Comp
                 padding: '9px 18px', borderRadius: 50, textDecoration: 'none',
               }}
             >
-              PcComponentes →
+              PcComponentes -&gt;
             </a>
           </div>
         </div>
