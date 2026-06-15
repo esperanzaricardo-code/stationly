@@ -58,7 +58,6 @@ export default function ComponentDetail({ component, setups }: { component: Comp
           ← Volver al índice
         </Link>
 
-        {/* ── Header del componente ── */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap',
           background: 'var(--surface)', border: '1px solid var(--border)',
@@ -85,7 +84,6 @@ export default function ComponentDetail({ component, setups }: { component: Comp
             </div>
           </div>
 
-          {/* Links de compra */}
           <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
             
               href={makeAmazonLink(component.display_name)}
@@ -120,7 +118,6 @@ export default function ComponentDetail({ component, setups }: { component: Comp
         </h2>
       </div>
 
-      {/* ── Grid de setups (mismo estilo masonry que el feed) ── */}
       {setups.length === 0 ? (
         <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 32px 80px' }}>
           <div style={{ textAlign: 'center', padding: '60px 24px', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-dim)' }}>
