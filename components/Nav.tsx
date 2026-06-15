@@ -147,6 +147,11 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
         {/* Desktop */}
         <div className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
 
+          {/* Índice de Componentes */}
+          <Link href="/components" className="btn-secondary" style={{ fontSize: 13 }}>
+            🧩 Componentes
+          </Link>
+
           {/* Toggle tema — solo no registrados */}
           {!loggedIn && (
             <button onClick={toggle} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} style={{
@@ -289,6 +294,10 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
           display: 'flex', flexDirection: 'column', gap: 10,
           boxShadow: 'var(--shadow-lg)',
         }}>
+          <Link href="/components" onClick={() => setMenuOpen(false)} className="btn-secondary" style={{ fontSize: 14, padding: '12px', width: '100%', textAlign: 'center', textDecoration: 'none' }}>
+            🧩 Índice de Componentes
+          </Link>
+
           <div style={{ marginBottom: 4 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8 }}>Tema</div>
             <div style={{ display: 'flex', gap: 8 }}>
