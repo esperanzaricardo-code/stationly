@@ -100,7 +100,7 @@ export default function ComponentsList({ components }: { components: ComponentIn
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '0 24px 80px' }}>
         {filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 24px', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>No results</div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>
               No hay componentes en esta categoría
             </h2>
