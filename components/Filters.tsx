@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-
 const FILTERS = [
   { key: 'all', label: '✦ Todos' },
   { key: 'gaming', label: '🎮 Gaming' },
@@ -9,20 +8,17 @@ const FILTERS = [
   { key: 'minimal', label: '◻ Minimal' },
   { key: 'rgb', label: '🌈 RGB' },
 ]
-
 export default function Filters() {
   const [active, setActive] = useState('all')
-
   function handleFilter(key: string) {
     setActive(key)
     document.dispatchEvent(new CustomEvent('stationly:filter', { detail: key }))
   }
-
   return (
     <div style={{
       position: 'relative', zIndex: 1,
       display: 'flex', alignItems: 'center', gap: 8,
-      padding: '0 32px 28px', maxWidth: 1400, margin: '0 auto',
+      padding: '0 32px 28px', maxWidth: 1800, margin: '0 auto',
       overflowX: 'auto', scrollbarWidth: 'none',
     }}>
       {FILTERS.map(f => (
