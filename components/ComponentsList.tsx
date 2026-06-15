@@ -151,7 +151,7 @@ export default function ComponentsList({ components }: { components: ComponentIn
                   style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}
                   onClick={e => e.stopPropagation()}
                 >
-                  
+                  <a
                     href={makeAmazonLink(comp.display_name)}
                     target="_blank" rel="noopener noreferrer"
                     onClick={e => e.stopPropagation()}
@@ -163,7 +163,7 @@ export default function ComponentsList({ components }: { components: ComponentIn
                   >
                     Amazon &#8594;
                   </a>
-                  
+                  <a
                     href={makePcComponentesLink(comp.display_name)}
                     target="_blank" rel="noopener noreferrer"
                     onClick={e => e.stopPropagation()}
