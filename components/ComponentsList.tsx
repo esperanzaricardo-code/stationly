@@ -5,6 +5,7 @@ import { ComponentIndexRow } from '@/app/components/page'
 
 const STATIONLY_AFFILIATE_ID = process.env.NEXT_PUBLIC_AMAZON_AFFILIATE_ID || 'stationly-21'
 
+// -- Categorías disponibles para filtrar --
 const CATEGORY_FILTERS = [
   { key: 'all', label: 'Todos' },
   { key: 'GPU', label: 'GPU' },
@@ -27,6 +28,7 @@ const CATEGORY_FILTERS = [
   { key: 'Otros', label: 'Otros' },
 ]
 
+// -- Icono por categoría para la foto pequeña --
 const CATEGORY_ICONS: Record<string, string> = {
   'GPU': 'GPU',
   'CPU': 'CPU',
@@ -74,7 +76,7 @@ export default function ComponentsList({ components }: { components: ComponentIn
       <div style={{
         position: 'relative', zIndex: 1,
         display: 'flex', alignItems: 'center', gap: 8,
-        padding: '0 24px 28px', maxWidth: 900, margin: '0 auto',
+        padding: '0 24px 28px', maxWidth: 1800, margin: '0 auto',
         overflowX: 'auto', scrollbarWidth: 'none',
       }}>
         {CATEGORY_FILTERS.map(f => (
@@ -97,7 +99,8 @@ export default function ComponentsList({ components }: { components: ComponentIn
         ))}
       </div>
 
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '0 24px 80px' }}>
+      {/* Listado */}
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 1800, margin: '0 auto', padding: '0 24px 80px' }}>
         {filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 24px', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
@@ -121,6 +124,7 @@ export default function ComponentsList({ components }: { components: ComponentIn
                   textDecoration: 'none', transition: 'border-color 0.15s',
                 }}
               >
+                {/* Posición */}
                 <div style={{
                   flexShrink: 0, width: 32, textAlign: 'center',
                   fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800,
@@ -129,15 +133,17 @@ export default function ComponentsList({ components }: { components: ComponentIn
                   #{i + 1}
                 </div>
 
+                {/* Icono / foto pequeña */}
                 <div style={{
                   flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--radius-sm)',
                   background: 'var(--surface2)', border: '1px solid var(--border)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-muted)',
+                  fontSize: 20,
                 }}>
                   {getIcon(comp.category)}
                 </div>
 
+                {/* Nombre + setup count */}
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
                     {comp.display_name}
@@ -147,6 +153,7 @@ export default function ComponentsList({ components }: { components: ComponentIn
                   </div>
                 </div>
 
+                {/* Links de compra */}
                 <div
                   style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}
                   onClick={e => e.stopPropagation()}
