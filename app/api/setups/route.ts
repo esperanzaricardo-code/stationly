@@ -53,6 +53,65 @@ async function moderateImage(base64: string, mediaType: string): Promise<{ safe:
   }
 }
 
+// =========================================================
+// Detección simple de categoría a partir del nombre del componente
+// =========================================================
+function detectCategory(name: string): string {
+  const n = name.toLowerCase()
+
+  // GPU
+  if (/(rtx|gtx|radeon|rx \d|geforce|arc a\d|nvidia|amd radeon)/.test(n)) return 'GPU'
+
+  // CPU
+  if (/(ryzen|core i\d|intel|threadripper|xeon|pentium|celeron|apu)/.test(n)) return 'CPU'
+
+  // Motherboard
+  if (/(placa base|motherboard|mainboard|chipset|b550|b650|x570|x670|z690|z790|h610|a520)/.test(n)) return 'Placa Base'
+
+  // RAM
+  if (/(ram|ddr3|ddr4|ddr5|memoria)/.test(n)) return 'RAM'
+
+  // Storage
+  if (/(ssd|nvme|hdd|disco duro|m\.2|sata)/.test(n)) return 'Almacenamiento'
+
+  // PSU
+  if (/(fuente|psu|80\+|bronze|gold|platinum|fully modular|watts|w\b)/.test(n)) return 'Fuente de Alimentación'
+
+  // Case
+  if (/(torre|case|gabinete|chasis|chassis|caja pc|mid tower|full tower)/.test(n)) return 'Caja'
+
+  // Cooling
+  if (/(refrigeraci[oó]n|cooler|aio|ventilador|fan|disipador|radiador|water cooling)/.test(n)) return 'Refrigeración'
+
+  // Monitor
+  if (/(monitor|pantalla|display|hz\b|144hz|165hz|240hz|curvo|ultrawide)/.test(n)) return 'Monitor'
+
+  // Keyboard
+  if (/(teclado|keyboard|mecánico|mecanico|switches)/.test(n)) return 'Teclado'
+
+  // Mouse
+  if (/(rat[oó]n|mouse|dpi)/.test(n)) return 'Ratón'
+
+  // Headset
+  if (/(auriculares|headset|cascos|micr[oó]fono|headphone)/.test(n)) return 'Audio'
+
+  // Webcam
+  if (/(webcam|c[aá]mara)/.test(n)) return 'Webcam'
+
+  // Chair / Desk
+  if (/(silla|chair)/.test(n)) return 'Silla'
+  if (/(escritorio|mesa|desk)/.test(n)) return 'Escritorio'
+
+  // Mousepad
+  if (/(alfombrilla|mousepad|pad)/.test(n)) return 'Mousepad'
+
+  // Microphone (standalone)
+  if (/(micr[oó]fono|microphone|mic\b)/.test(n)) return 'Micrófono'
+
+  // Default
+  return 'Otros'
+}
+
 export async function GET() {
   const { data, error } = await supabase
     .from('setups').select('*')
@@ -122,6 +181,13 @@ export async function POST(req: NextRequest) {
       .select().single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Sync component index: nuevo setup tiene components: [] -> no-op, pero lo dejamos por consistencia
+    await supabaseAdmin.rpc('sync_component_index', {
+      old_components: [],
+      new_components: [],
+    })
+
     return NextResponse.json(data, { status: 201 })
 
   } catch (err) {
@@ -147,7 +213,7 @@ export async function PUT(req: NextRequest) {
 
     // Verificamos ownership antes de actualizar
     const { data: existing } = await supabaseAdmin
-      .from('setups').select('user_name').eq('id', setupId).single()
+      .from('setups').select('user_name, components').eq('id', setupId).single()
 
     if (!existing || existing.user_name.toLowerCase() !== userName.toLowerCase()) {
       return NextResponse.json({ error: 'No tienes permiso para editar este setup' }, { status: 403 })
@@ -160,6 +226,24 @@ export async function PUT(req: NextRequest) {
       .select().single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Sync component index si "components" cambió
+    if (updates.components !== undefined) {
+      const oldComponents = (existing.components || []).map((c: { name: string }) => ({
+        name: c.name,
+        category: detectCategory(c.name),
+      }))
+      const newComponents = (updates.components || []).map((c: { name: string }) => ({
+        name: c.name,
+        category: detectCategory(c.name),
+      }))
+
+      await supabaseAdmin.rpc('sync_component_index', {
+        old_components: oldComponents,
+        new_components: newComponents,
+      })
+    }
+
     return NextResponse.json(data)
 
   } catch (err) {
@@ -185,7 +269,7 @@ export async function DELETE(req: NextRequest) {
 
     // Verificamos ownership antes de eliminar
     const { data: existing } = await supabaseAdmin
-      .from('setups').select('user_name').eq('id', setupId).single()
+      .from('setups').select('user_name, components').eq('id', setupId).single()
 
     if (!existing || existing.user_name.toLowerCase() !== userName.toLowerCase()) {
       return NextResponse.json({ error: 'No tienes permiso para eliminar este setup' }, { status: 403 })
@@ -195,6 +279,18 @@ export async function DELETE(req: NextRequest) {
       .from('setups').delete().eq('id', setupId)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Sync component index: setup eliminado -> decrementar todos sus componentes
+    const oldComponents = (existing.components || []).map((c: { name: string }) => ({
+      name: c.name,
+      category: detectCategory(c.name),
+    }))
+
+    await supabaseAdmin.rpc('sync_component_index', {
+      old_components: oldComponents,
+      new_components: [],
+    })
+
     return NextResponse.json({ success: true })
 
   } catch (err) {
