@@ -105,12 +105,13 @@ export default function Feed({ initialSetups }: { initialSetups: Setup[] }) {
           position: 'relative', zIndex: 1,
           columns: 4, columnGap: 16,
           padding: '0 32px 80px',
-          maxWidth: 1400, margin: '0 auto',
+          maxWidth: 1800, margin: '0 auto',
           width: '100%', boxSizing: 'border-box',
         }}
         className="feed"
       >
         <style>{`
+          @media (min-width: 1801px) { .feed { columns: 5 !important; } }
           @media (max-width: 1200px) { .feed { columns: 3 !important; } }
           @media (max-width: 860px)  { .feed { columns: 2 !important; } }
           @media (max-width: 540px)  { .feed { columns: 1 !important; padding: 0 16px 60px !important; } }
