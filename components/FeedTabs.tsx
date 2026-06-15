@@ -32,7 +32,6 @@ export default function FeedTabs({ setups, components }: Props) {
             fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.18s',
           }}>
             Setups
-            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'setups' ? 'var(--setup-accent, var(--accent))' : 'var(--text-dim)' }}>{setups.length}</span>
           </button>
           <button onClick={() => setActiveTab('components')} style={{
             padding: '8px 20px', borderRadius: 'var(--radius-sm)',
@@ -42,7 +41,6 @@ export default function FeedTabs({ setups, components }: Props) {
             fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.18s',
           }}>
             Componentes
-            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'components' ? 'var(--setup-accent, var(--accent))' : 'var(--text-dim)' }}>{components.length}</span>
           </button>
         </div>
       </div>
