@@ -6,50 +6,50 @@ import { ComponentIndexRow } from '@/app/components/page'
 const STATIONLY_AFFILIATE_ID = process.env.NEXT_PUBLIC_AMAZON_AFFILIATE_ID || 'stationly-21'
 
 const CATEGORY_FILTERS = [
-  { key: 'all', label: '✦ Todos' },
-  { key: 'GPU', label: '🎮 GPU' },
-  { key: 'CPU', label: '🧠 CPU' },
-  { key: 'RAM', label: '🧩 RAM' },
-  { key: 'Placa Base', label: '🔌 Placa Base' },
-  { key: 'Almacenamiento', label: '💾 Almacenamiento' },
-  { key: 'Fuente de Alimentación', label: '⚡ Fuente' },
-  { key: 'Caja', label: '🖥️ Caja' },
-  { key: 'Refrigeración', label: '❄️ Refrigeración' },
-  { key: 'Monitor', label: '🖼️ Monitor' },
-  { key: 'Teclado', label: '⌨️ Teclado' },
-  { key: 'Ratón', label: '🖱️ Ratón' },
-  { key: 'Audio', label: '🎧 Audio' },
-  { key: 'Micrófono', label: '🎙️ Micrófono' },
-  { key: 'Webcam', label: '📷 Webcam' },
-  { key: 'Silla', label: '💺 Silla' },
-  { key: 'Escritorio', label: '🛠️ Escritorio' },
-  { key: 'Mousepad', label: '🟪 Mousepad' },
-  { key: 'Otros', label: '❔ Otros' },
+  { key: 'all', label: 'Todos' },
+  { key: 'GPU', label: 'GPU' },
+  { key: 'CPU', label: 'CPU' },
+  { key: 'RAM', label: 'RAM' },
+  { key: 'Placa Base', label: 'Placa Base' },
+  { key: 'Almacenamiento', label: 'Almacenamiento' },
+  { key: 'Fuente de Alimentación', label: 'Fuente' },
+  { key: 'Caja', label: 'Caja' },
+  { key: 'Refrigeración', label: 'Refrigeración' },
+  { key: 'Monitor', label: 'Monitor' },
+  { key: 'Teclado', label: 'Teclado' },
+  { key: 'Ratón', label: 'Ratón' },
+  { key: 'Audio', label: 'Audio' },
+  { key: 'Micrófono', label: 'Micrófono' },
+  { key: 'Webcam', label: 'Webcam' },
+  { key: 'Silla', label: 'Silla' },
+  { key: 'Escritorio', label: 'Escritorio' },
+  { key: 'Mousepad', label: 'Mousepad' },
+  { key: 'Otros', label: 'Otros' },
 ]
 
 const CATEGORY_ICONS: Record<string, string> = {
-  'GPU': '🎮',
-  'CPU': '🧠',
-  'RAM': '🧩',
-  'Placa Base': '🔌',
-  'Almacenamiento': '💾',
-  'Fuente de Alimentación': '⚡',
-  'Caja': '🖥️',
-  'Refrigeración': '❄️',
-  'Monitor': '🖼️',
-  'Teclado': '⌨️',
-  'Ratón': '🖱️',
-  'Audio': '🎧',
-  'Micrófono': '🎙️',
-  'Webcam': '📷',
-  'Silla': '💺',
-  'Escritorio': '🛠️',
-  'Mousepad': '🟪',
+  'GPU': 'GPU',
+  'CPU': 'CPU',
+  'RAM': 'RAM',
+  'Placa Base': 'MB',
+  'Almacenamiento': 'SSD',
+  'Fuente de Alimentación': 'PSU',
+  'Caja': 'PC',
+  'Refrigeración': 'FAN',
+  'Monitor': 'MON',
+  'Teclado': 'KB',
+  'Ratón': 'M',
+  'Audio': 'AUD',
+  'Micrófono': 'MIC',
+  'Webcam': 'CAM',
+  'Silla': 'CH',
+  'Escritorio': 'DSK',
+  'Mousepad': 'PAD',
 }
 
 function getIcon(category: string | null): string {
-  if (!category) return '❔'
-  return CATEGORY_ICONS[category] || '❔'
+  if (!category) return '?'
+  return CATEGORY_ICONS[category] || '?'
 }
 
 function makeAmazonLink(name: string): string {
@@ -100,7 +100,7 @@ export default function ComponentsList({ components }: { components: ComponentIn
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '0 24px 80px' }}>
         {filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 24px', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>No results</div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>
               No hay componentes en esta categoría
             </h2>
@@ -133,7 +133,7 @@ export default function ComponentsList({ components }: { components: ComponentIn
                   flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--radius-sm)',
                   background: 'var(--surface2)', border: '1px solid var(--border)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 20,
+                  fontSize: 11, fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-muted)',
                 }}>
                   {getIcon(comp.category)}
                 </div>
@@ -143,7 +143,7 @@ export default function ComponentsList({ components }: { components: ComponentIn
                     {comp.display_name}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                    {comp.category || 'Sin categoría'} · {comp.setup_count} setup{comp.setup_count !== 1 ? 's' : ''}
+                    {comp.category || 'Sin categoría'} - {comp.setup_count} setup{comp.setup_count !== 1 ? 's' : ''}
                   </div>
                 </div>
 
@@ -161,7 +161,7 @@ export default function ComponentsList({ components }: { components: ComponentIn
                       padding: '5px 12px', borderRadius: 50, textDecoration: 'none',
                     }}
                   >
-                    Amazon →
+                    Amazon -&gt;
                   </a>
                   
                     href={makePcComponentesLink(comp.display_name)}
@@ -173,7 +173,7 @@ export default function ComponentsList({ components }: { components: ComponentIn
                       padding: '5px 12px', borderRadius: 50, textDecoration: 'none',
                     }}
                   >
-                    PcComponentes →
+                    PcComponentes -&gt;
                   </a>
                 </div>
               </Link>
