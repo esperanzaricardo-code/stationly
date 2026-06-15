@@ -183,10 +183,11 @@ export async function POST(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     // Sync component index: nuevo setup tiene components: [] -> no-op, pero lo dejamos por consistencia
-    await supabaseAdmin.rpc('sync_component_index', {
+    const { error: syncError } = await supabaseAdmin.rpc('sync_component_index', {
       old_components: [],
       new_components: [],
     })
+    if (syncError) console.error('sync_component_index error (POST):', syncError)
 
     return NextResponse.json(data, { status: 201 })
 
@@ -238,10 +239,16 @@ export async function PUT(req: NextRequest) {
         category: detectCategory(c.name),
       }))
 
-      await supabaseAdmin.rpc('sync_component_index', {
+      console.log('sync_component_index PUT - old:', JSON.stringify(oldComponents))
+      console.log('sync_component_index PUT - new:', JSON.stringify(newComponents))
+
+      const { error: syncError } = await supabaseAdmin.rpc('sync_component_index', {
         old_components: oldComponents,
         new_components: newComponents,
       })
+      if (syncError) console.error('sync_component_index error (PUT):', syncError)
+    } else {
+      console.log('sync_component_index PUT - updates.components is undefined, skipping')
     }
 
     return NextResponse.json(data)
@@ -286,10 +293,11 @@ export async function DELETE(req: NextRequest) {
       category: detectCategory(c.name),
     }))
 
-    await supabaseAdmin.rpc('sync_component_index', {
+    const { error: syncError } = await supabaseAdmin.rpc('sync_component_index', {
       old_components: oldComponents,
       new_components: [],
     })
+    if (syncError) console.error('sync_component_index error (DELETE):', syncError)
 
     return NextResponse.json({ success: true })
 
