@@ -48,7 +48,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
   const [loggedIn, setLoggedIn] = useState(false)
   const [username, setUsername] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [appColor, setAppColor] = useState<AccentColor>('lime')
 
   const isProfilePage = pathname?.startsWith('/u/')
@@ -101,6 +101,7 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
 
   function handleLogout() {
     setMenuOpen(false)
+    setUserMenuOpen(false)
     setStoredAppColor('lime')
     applyAppColor('lime')
     setAppColor('lime')
@@ -159,29 +160,54 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
             </button>
           )}
 
-         {/* Botón ajustes — solo registrados */}
-        {loggedIn && (
-          <div style={{ position: 'relative' }} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setSettingsOpen(false) }} tabIndex={-1}>
-              <button onClick={() => setSettingsOpen(o => !o)} title="Ajustes de apariencia" style={{
-                background: settingsOpen ? 'var(--surface3)' : 'var(--surface2)',
+          {loggedIn ? (
+            <div style={{ position: 'relative' }} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setUserMenuOpen(false) }} tabIndex={-1}>
+              <button onClick={() => setUserMenuOpen(o => !o)} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: userMenuOpen ? 'var(--surface3)' : 'var(--surface2)',
                 border: '1px solid var(--border)',
-                color: 'var(--text-muted)', width: 38, height: 38, borderRadius: '50%',
-                fontSize: 16, cursor: 'pointer', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+                borderRadius: 50, padding: '6px 14px 6px 6px',
+                cursor: 'pointer', transition: 'all 0.2s',
               }}>
-                ✦
+                <div style={{
+                  width: 26, height: 26, borderRadius: '50%',
+                  background: `linear-gradient(135deg, var(--accent), var(--accent2))`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11,
+                  color: '#0a0a0b', flexShrink: 0,
+                }}>
+                  {username.slice(0, 2).toUpperCase()}
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
+                  {username}
+                </span>
+                <span style={{ fontSize: 10, color: 'var(--text-dim)', marginLeft: 2 }}>
+                  {userMenuOpen ? '▲' : '▼'}
+                </span>
               </button>
 
-              {settingsOpen && (
+              {userMenuOpen && (
                 <div style={{
-                  position: 'absolute', top: 46, right: 0,
+                  position: 'absolute', top: 50, right: 0,
                   background: 'var(--surface)', border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)', padding: 20,
+                  borderRadius: 'var(--radius)', padding: 12,
                   minWidth: 240, boxShadow: 'var(--shadow-lg)', zIndex: 200,
                 }}>
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Tema</div>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                  <Link href={`/u/${username}`} onClick={() => setUserMenuOpen(false)} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 12px', borderRadius: 'var(--radius-sm)',
+                    textDecoration: 'none', color: 'var(--text)',
+                    fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
+                    marginBottom: 8, background: 'var(--surface2)',
+                  }}>
+                    <span style={{ fontSize: 15 }}>👤</span> Ver perfil
+                  </Link>
+
+                  <div style={{ height: 1, background: 'var(--border)', margin: '4px 0 12px' }} />
+
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10, padding: '0 4px' }}>Tema</div>
+                    <div style={{ display: 'flex', gap: 8, padding: '0 4px' }}>
                       {(['dark', 'light'] as const).map(t => (
                         <button key={t} onClick={toggle} style={{
                           flex: 1, padding: '8px', borderRadius: 'var(--radius-sm)',
@@ -197,7 +223,8 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
                       ))}
                     </div>
                   </div>
-                  <div>
+
+                  <div style={{ marginBottom: 12, padding: '0 4px' }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color</div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {ACCENT_COLORS.map(color => (
@@ -219,36 +246,21 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
                       </p>
                     )}
                   </div>
+
+                  <div style={{ height: 1, background: 'var(--border)', margin: '4px 0 8px' }} />
+
+                  <button onClick={handleLogout} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                    padding: '10px 12px', borderRadius: 'var(--radius-sm)',
+                    background: 'transparent', border: 'none', cursor: 'pointer',
+                    color: 'var(--text-muted)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600,
+                    textAlign: 'left',
+                  }}>
+                    <span style={{ fontSize: 15 }}>🚪</span> Salir
+                  </button>
                 </div>
               )}
             </div>
-          )}
-
-          {loggedIn ? (
-            <>
-              <Link href={`/u/${username}`} style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                background: 'var(--surface2)', border: '1px solid var(--border)',
-                borderRadius: 50, padding: '6px 14px 6px 6px',
-                textDecoration: 'none', transition: 'all 0.2s',
-              }}>
-                <div style={{
-                  width: 26, height: 26, borderRadius: '50%',
-                  background: `linear-gradient(135deg, var(--accent), var(--accent2))`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11,
-                  color: '#0a0a0b', flexShrink: 0,
-                }}>
-                  {username.slice(0, 2).toUpperCase()}
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
-                  {username}
-                </span>
-              </Link>
-              <button onClick={handleLogout} className="btn-secondary" style={{ fontSize: 13 }}>
-                Salir
-              </button>
-            </>
           ) : (
             <Link href="/login" className="btn-secondary" style={{ fontSize: 13 }}>
               Iniciar sesión
