@@ -198,9 +198,19 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
                     padding: '10px 12px', borderRadius: 'var(--radius-sm)',
                     textDecoration: 'none', color: 'var(--text)',
                     fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-                    marginBottom: 8, background: 'var(--surface2)',
+                    marginBottom: 6, background: 'var(--surface2)',
                   }}>
                     Ver perfil
+                  </Link>
+
+                  <Link href="/settings" onClick={() => setUserMenuOpen(false)} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 12px', borderRadius: 'var(--radius-sm)',
+                    textDecoration: 'none', color: 'var(--text-muted)',
+                    fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600,
+                    marginBottom: 8,
+                  }}>
+                    Configuración
                   </Link>
 
                   <div style={{ height: 1, background: 'var(--border)', margin: '4px 0 12px' }} />
@@ -360,6 +370,9 @@ export default function Nav({ setupCount, totalLikes }: { setupCount?: number; t
                 <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
                   {username}
                 </span>
+              </Link>
+              <Link href="/settings" onClick={() => setMenuOpen(false)} className="btn-secondary" style={{ fontSize: 14, padding: '12px', width: '100%', textAlign: 'center', textDecoration: 'none' }}>
+                Configuración
               </Link>
               <button onClick={handleUpload} className="btn-primary" style={{ fontSize: 14, padding: '12px', width: '100%' }}>
                 📸 Subir Setup
