@@ -42,17 +42,6 @@ export default async function FeedPage() {
       <AnimatedBackground />
       <Nav setupCount={stats.setupCount} totalLikes={stats.totalLikes} />
       <div style={{ position: 'relative', zIndex: 1, paddingTop: 24 }}>
-        <div style={{ maxWidth: 1800, margin: '0 auto', padding: '0 32px 16px' }}>
-          <h1 style={{
-            fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800,
-            letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4,
-          }}>
-            Setups de la comunidad
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-            {stats.setupCount} setups publicados · {stats.totalLikes.toLocaleString()} likes
-          </p>
-        </div>
         <FeedTabs setups={setups} components={components} />
       </div>
       <UploadModal />
