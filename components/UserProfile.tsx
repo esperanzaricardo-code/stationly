@@ -48,7 +48,6 @@ function totalLikes(setups: Setup[]) {
   return setups.reduce((a, s) => a + (s.likes || 0), 0)
 }
 
-// ── Solo cuenta componentes, no pins ──
 function totalComponents(setups: Setup[]) {
   return setups.reduce((a, s) => {
     const components = (s.components || []).filter(c => c.name && c.name.trim())
@@ -56,7 +55,6 @@ function totalComponents(setups: Setup[]) {
   }, 0)
 }
 
-// ── Sistema de borrador (autoguardado en localStorage) ──
 type SetupDraft = {
   title: string
   components: Component[]
@@ -148,7 +146,6 @@ function ProfileTag({ tag }: { tag: string }) {
   )
 }
 
-// ── Modal de registro para no registrados ──
 function RegisterPromptModal({ onClose }: { onClose: () => void }) {
   const router = useRouter()
   return (
@@ -258,22 +255,11 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showRegisterPrompt, setShowRegisterPrompt] = useState(false)
 
-  // Modal editar perfil
-  const [showProfileModal, setShowProfileModal] = useState(false)
-  const [savingProfile, setSavingProfile] = useState(false)
-
   // Datos del perfil
   const [profileTag, setProfileTag] = useState<string | null>(null)
   const [roleTag, setRoleTag] = useState<string | null>(null)
   const [amazonAffiliateId, setAmazonAffiliateId] = useState<string>('')
   const [showPcComponentes, setShowPcComponentes] = useState(true)
-  const [appColor, setAppColor] = useState<AccentColor>('lime')
-
-  // Edición del perfil (modal)
-  const [editRoleTag, setEditRoleTag] = useState<string>('')
-  const [editAmazonAffiliateId, setEditAmazonAffiliateId] = useState<string>('')
-  const [editShowPcComponentes, setEditShowPcComponentes] = useState(true)
-  const [editAppColor, setEditAppColor] = useState<AccentColor>('lime')
 
   // Edición del setup
   const [editAccentColor, setEditAccentColor] = useState<AccentColor>('lime')
@@ -361,7 +347,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         if (data?.role_tag) setRoleTag(data.role_tag)
         if (data?.amazon_affiliate_id) setAmazonAffiliateId(data.amazon_affiliate_id)
         if (data?.show_pccomponentes !== undefined) setShowPcComponentes(data.show_pccomponentes)
-        if (data?.app_accent_color) setAppColor(data.app_accent_color as AccentColor)
       })
 
     const onNewSetup = (e: Event) => {
@@ -407,30 +392,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     const setupId = setups[index].id
     router.replace(`/u/${encodeURIComponent(username)}?setup=${setupId}`, { scroll: false })
     applyAccentColor((setups[index].accent_color || 'lime') as AccentColor)
-  }
-
-  function openProfileModal() {
-    setEditRoleTag(roleTag || '')
-    setEditAmazonAffiliateId(amazonAffiliateId || '')
-    setEditShowPcComponentes(showPcComponentes)
-    setEditAppColor(appColor)
-    setShowProfileModal(true)
-  }
-
-  async function saveProfileModal() {
-    setSavingProfile(true)
-    try {
-      await supabase.from('profiles').upsert({
-        username, tag: profileTag ?? null, role_tag: editRoleTag || null,
-        amazon_affiliate_id: editAmazonAffiliateId || null,
-        show_pccomponentes: editShowPcComponentes, app_accent_color: editAppColor,
-      }, { onConflict: 'username' })
-      setRoleTag(editRoleTag); setAmazonAffiliateId(editAmazonAffiliateId)
-      setShowPcComponentes(editShowPcComponentes); setAppColor(editAppColor)
-      try { localStorage.setItem('stationly-app-color', editAppColor) } catch {}
-      setShowProfileModal(false)
-    } catch {}
-    setSavingProfile(false)
   }
 
   async function toggleLike(setupId: string) {
@@ -707,71 +668,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         />
       )}
 
-      {/* ── Modal Editar Perfil ── */}
-      {showProfileModal && (
-        <div onClick={e => { if (e.target === e.currentTarget) setShowProfileModal(false) }}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 24, width: '100%', maxWidth: 480, padding: 32, position: 'relative', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
-            <button onClick={() => setShowProfileModal(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', width: 32, height: 32, borderRadius: '50%', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text)', marginBottom: 24 }}>Editar perfil</h2>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Tu tag</label>
-              {profileTag === 'Founder' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                  <ProfileTag tag="Founder" />
-                  <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>El tag Founder no se puede cambiar</span>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {TAGS.map(t => (
-                  <button key={t} onClick={() => setEditRoleTag(t)} style={{
-                    padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                    background: editRoleTag === t ? TAG_STYLES[t].bg : 'var(--surface2)',
-                    border: `1px solid ${editRoleTag === t ? TAG_STYLES[t].border : 'var(--border)'}`,
-                    color: editRoleTag === t ? TAG_STYLES[t].color : 'var(--text-muted)',
-                    transition: 'all 0.18s',
-                  }}>{t}</button>
-                ))}
-                {editRoleTag && (
-                  <button onClick={() => setEditRoleTag('')} style={{ padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>Sin tag</button>
-                )}
-              </div>
-            </div>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color de la app</label>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {ACCENT_COLORS.map(color => (
-                  <button key={color.id} onClick={() => setEditAppColor(color.id)} title={color.label}
-                    style={{ width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', border: 'none', background: `linear-gradient(135deg, ${color.from}, ${color.to})`, outline: editAppColor === color.id ? `3px solid ${color.from}` : '3px solid transparent', outlineOffset: 2, boxShadow: editAppColor === color.id ? `0 0 10px ${color.from}88` : 'none', transition: 'all 0.18s' }}
-                  />
-                ))}
-              </div>
-            </div>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>ID de afiliado Amazon</label>
-              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Si tienes cuenta en Amazon Associates, pega aquí tu ID (ej: tunombre-21).</p>
-              <input value={editAmazonAffiliateId} onChange={e => setEditAmazonAffiliateId(e.target.value)} placeholder="ej: tunombre-21" style={inputStyle} />
-            </div>
-            <div style={{ marginBottom: 28 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Links de tiendas</label>
-              <button onClick={() => setEditShowPcComponentes(v => !v)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
-                <div style={{ width: 36, height: 20, borderRadius: 10, transition: 'background 0.2s', background: editShowPcComponentes ? `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))` : 'var(--border)', position: 'relative', flexShrink: 0 }}>
-                  <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#fff', position: 'absolute', top: 3, left: editShowPcComponentes ? 19 : 3, transition: 'left 0.2s' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Mostrar PcComponentes</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Amazon siempre aparece. PcComponentes es opcional.</div>
-                </div>
-              </button>
-            </div>
-            <button onClick={saveProfileModal} disabled={savingProfile} className="btn-primary" style={{ width: '100%', fontSize: 14, padding: 13, opacity: savingProfile ? 0.6 : 1 }}>
-              {savingProfile ? '⏳ Guardando...' : '✓ Guardar perfil'}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── Profile header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 36, flexWrap: 'wrap' }}>
         <div style={{ width: 72, height: 72, borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0b', border: '3px solid var(--setup-accent)', boxShadow: '0 0 20px var(--setup-accent-glow)' }}>
@@ -798,10 +694,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
           {isOwner && !editing && (
-            <>
-              <button onClick={openProfileModal} className="btn-secondary" style={{ fontSize: 13 }}>👤 Editar perfil</button>
-              <button onClick={startEditing} className="btn-secondary" style={{ fontSize: 13 }}>✏️ Editar setup</button>
-            </>
+            <button onClick={startEditing} className="btn-secondary" style={{ fontSize: 13 }}>✏️ Editar setup</button>
           )}
           <button onClick={copyLink} className="btn-primary" style={{ fontSize: 13, padding: '9px 18px' }}>🔗 Copiar link</button>
         </div>
