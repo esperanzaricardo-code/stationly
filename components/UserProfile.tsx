@@ -55,6 +55,16 @@ function totalComponents(setups: Setup[]) {
   }, 0)
 }
 
+// Detecta nombres de componentes que parecen incompletos o con texto de instrucción
+// (ej: "Apple iMac (especificar modelo: iMac 24, iMac 27, etc.)")
+function isSuspiciousName(name: string): boolean {
+  if (!name) return false
+  const n = name.toLowerCase()
+  if (n.includes('(') || n.includes(')')) return true
+  if (/especificar|modelo desconocido|confirmar modelo|\betc\.?\b/.test(n)) return true
+  return false
+}
+
 type SetupDraft = {
   title: string
   components: Component[]
@@ -538,11 +548,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   function rejectComponent(comp: Component) { setScanResults(prev => prev.filter(c => c.name !== comp.name)) }
 
   function acceptAll() {
-    const accepted = scanResults.map(comp => {
+    const confidentOnes = scanResults.filter(c => c.confident !== false && !c.unknown)
+    const accepted = confidentOnes.map(comp => {
       const name = comp.did_you_mean || comp.name
       return { name, type: comp.type, category: comp.category, links: generateLinks(name, showPcComponentes, amazonAffiliateId) }
     })
-    setEditComponents(prev => [...prev, ...accepted]); setScanResults([])
+    setEditComponents(prev => [...prev, ...accepted])
+    setScanResults(prev => prev.filter(c => c.confident === false || c.unknown))
   }
 
   function updateScanResultName(index: number, name: string) { setScanResults(prev => prev.map((c, i) => i === index ? { ...c, name } : c)) }
@@ -584,6 +596,17 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       if (ok) { acceptAll(); return }
       else return
     }
+
+    const suspicious = editComponents.filter(c => isSuspiciousName(c.name))
+    if (suspicious.length > 0) {
+      const ok = await confirm({
+        title: 'Revisa estos nombres antes de guardar',
+        message: `Estos componentes tienen nombres que parecen incompletos: ${suspicious.map(c => `"${c.name}"`).join(', ')}. ¿Quieres guardarlos tal como están?`,
+        confirmLabel: 'Sí, guardar igual', cancelLabel: 'Volver a revisar',
+      })
+      if (!ok) return
+    }
+
     setSaving(true)
     try {
       let image_url = setup.image_url
@@ -815,43 +838,98 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
               {photoScanning ? '⏳ Identificando...' : '📷 ¿No sabes el nombre? Haz una foto al componente'}
             </button>
 
-            {scanDone && scanResults.length > 0 && (
+            {scanDone && scanResults.length > 0 && (() => {
+              const confirmedResults = scanResults.filter(c => c.confident !== false && !c.unknown)
+              const reviewResults = scanResults.filter(c => c.confident === false || c.unknown)
+              return (
               <div style={{ marginTop: 12, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
                     ✦ {scanResults.length} componente{scanResults.length !== 1 ? 's' : ''} detectado{scanResults.length !== 1 ? 's' : ''}
                   </div>
-                  <button onClick={acceptAll} style={{ background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, border: 'none', color: 'var(--setup-accent-fg)', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, cursor: 'pointer', fontFamily: 'var(--font-display)' }}>
-                    ✓ Aceptar todos
-                  </button>
+                  {confirmedResults.length > 0 && (
+                    <button onClick={acceptAll} style={{ background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, border: 'none', color: 'var(--setup-accent-fg)', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, cursor: 'pointer', fontFamily: 'var(--font-display)' }}>
+                      ✓ Aceptar los {confirmedResults.length} confirmados
+                    </button>
+                  )}
                 </div>
-                <p style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 10 }}>✏️ Haz clic en el nombre para editarlo si la IA se ha equivocado</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {scanResults.map((comp, i) => (
-                    <div key={i} style={{ background: 'var(--surface)', border: `1px solid ${comp.unknown ? 'rgba(255,77,109,0.3)' : comp.confident === false ? 'rgba(207,250,124,0.3)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: comp.did_you_mean ? 4 : 0 }}>
-                            <CategoryPill type={comp.type} category={comp.category} />
-                            <input value={comp.name} onChange={e => updateScanResultName(i, e.target.value)}
-                              style={{ background: 'transparent', border: 'none', borderBottom: '1px dashed var(--border)', color: comp.unknown ? '#ff4d6d' : 'var(--text)', fontSize: 13, fontWeight: 600, outline: 'none', flex: 1, minWidth: 0, cursor: 'text', fontFamily: 'var(--font-display)', padding: '2px 4px' }} />
-                            <span style={{ fontSize: 11, color: 'var(--text-dim)', flexShrink: 0 }}>✏️</span>
-                          </div>
-                          {comp.did_you_mean && <div style={{ fontSize: 12, color: 'var(--tag-text)', marginTop: 4 }}>💡 ¿Te refieres a: <strong>{comp.did_you_mean}</strong>?</div>}
-                          {comp.unknown && <div style={{ fontSize: 11, color: '#ff4d6d', marginTop: 2 }}>⚠️ No reconocido — se añadirá tal como está</div>}
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                          <button onClick={() => comp.did_you_mean ? acceptSuggestion(comp) : acceptComponent(comp)}
-                            style={{ background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, border: 'none', color: 'var(--setup-accent-fg)', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>✓</button>
-                          <button onClick={() => rejectComponent(comp)}
-                            style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>✕</button>
-                        </div>
-                      </div>
+
+                {confirmedResults.length > 0 && (
+                  <div style={{ marginBottom: reviewResults.length > 0 ? 16 : 0 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--tag-text)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                      Confirmados
                     </div>
-                  ))}
-                </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {confirmedResults.map((comp) => {
+                        const i = scanResults.indexOf(comp)
+                        return (
+                        <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <CategoryPill type={comp.type} category={comp.category} />
+                                <input value={comp.name} onChange={e => updateScanResultName(i, e.target.value)}
+                                  style={{ background: 'transparent', border: 'none', borderBottom: '1px dashed var(--border)', color: 'var(--text)', fontSize: 13, fontWeight: 600, outline: 'none', flex: 1, minWidth: 0, cursor: 'text', fontFamily: 'var(--font-display)', padding: '2px 4px' }} />
+                                <span style={{ fontSize: 11, color: 'var(--text-dim)', flexShrink: 0 }}>✏️</span>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                              <button onClick={() => acceptComponent(comp)}
+                                style={{ background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, border: 'none', color: 'var(--setup-accent-fg)', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>✓</button>
+                              <button onClick={() => rejectComponent(comp)}
+                                style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>✕</button>
+                            </div>
+                          </div>
+                        </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {reviewResults.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#ffb84d', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                      Por revisar
+                    </div>
+                    <p style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 10 }}>La IA no está segura de estos. Revisa o corrige el nombre antes de aceptar.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {reviewResults.map((comp) => {
+                        const i = scanResults.indexOf(comp)
+                        return (
+                        <div key={i} style={{ background: 'var(--surface)', border: `1px solid ${comp.unknown ? 'rgba(255,77,109,0.3)' : 'rgba(255,184,77,0.3)'}`, borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <CategoryPill type={comp.type} category={comp.category} />
+                                <input value={comp.name} onChange={e => updateScanResultName(i, e.target.value)}
+                                  style={{ background: 'transparent', border: 'none', borderBottom: '1px dashed var(--border)', color: comp.unknown ? '#ff4d6d' : 'var(--text)', fontSize: 13, fontWeight: 600, outline: 'none', flex: 1, minWidth: 0, cursor: 'text', fontFamily: 'var(--font-display)', padding: '2px 4px' }} />
+                                <span style={{ fontSize: 11, color: 'var(--text-dim)', flexShrink: 0 }}>✏️</span>
+                              </div>
+                              {comp.did_you_mean && (
+                                <button onClick={() => updateScanResultName(i, comp.did_you_mean || comp.name)}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', color: 'var(--tag-text)', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 50, cursor: 'pointer' }}>
+                                  💡 Usar sugerencia: {comp.did_you_mean}
+                                </button>
+                              )}
+                              {comp.unknown && <div style={{ fontSize: 11, color: '#ff4d6d', marginTop: 6 }}>⚠️ No reconocido — revisa el nombre antes de aceptar</div>}
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                              <button onClick={() => comp.did_you_mean && comp.name === comp.did_you_mean ? acceptSuggestion(comp) : acceptComponent(comp)}
+                                style={{ background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, border: 'none', color: 'var(--setup-accent-fg)', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>✓</button>
+                              <button onClick={() => rejectComponent(comp)}
+                                style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}>✕</button>
+                            </div>
+                          </div>
+                        </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+              )
+            })()}
             {scanDone && scanResults.length === 0 && editComponents.length > 0 && (
               <div style={{ marginTop: 8, fontSize: 12, color: 'var(--tag-text)' }}>✓ Todos los componentes añadidos</div>
             )}
