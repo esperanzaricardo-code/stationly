@@ -31,12 +31,16 @@ export default async function UserPage({
   return (
     <ThemeProvider>
       <AnimatedBackground />
-      <Nav />
-      <UserProfile setups={setups} username={username} activeSetupId={searchParams.setup} />
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Nav />
+        <div style={{ flex: 1 }}>
+          <UserProfile setups={setups} username={username} activeSetupId={searchParams.setup} />
+        </div>
+        <Footer />
+      </div>
       <UploadModal />
       <Toast />
       <ConfirmModal />
-      <Footer />
     </ThemeProvider>
   )
 }
