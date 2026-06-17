@@ -1,9 +1,9 @@
 import Link from 'next/link'
-
 export default function Footer() {
   return (
     <footer style={{
       position: 'relative', zIndex: 1,
+      background: 'var(--nav-bg)', backdropFilter: 'blur(20px)',
       borderTop: '1px solid var(--border)',
       padding: '32px 24px',
       marginTop: 40,
