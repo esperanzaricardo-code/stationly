@@ -26,22 +26,24 @@ export default async function ComponentsPage() {
   return (
     <ThemeProvider>
       <AnimatedBackground />
-      <Nav />
-      <div style={{ position: 'relative', zIndex: 1, paddingTop: 24 }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px 16px' }}>
-          <h1 style={{
-            fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800,
-            letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4,
-          }}>
-            Índice de Componentes
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-            {components.length} componentes y periféricos usados por la comunidad
-          </p>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Nav />
+        <div style={{ position: 'relative', zIndex: 1, paddingTop: 24, flex: 1 }}>
+          <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px 16px' }}>
+            <h1 style={{
+              fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800,
+              letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4,
+            }}>
+              Índice de Componentes
+            </h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+              {components.length} componentes y periféricos usados por la comunidad
+            </p>
+          </div>
+          <ComponentsList components={components} />
         </div>
-        <ComponentsList components={components} />
+        <Footer />
       </div>
-      <Footer />
     </ThemeProvider>
   )
 }
