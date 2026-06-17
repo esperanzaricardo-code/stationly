@@ -36,13 +36,15 @@ export default async function FeedPage() {
   return (
     <ThemeProvider>
       <AnimatedBackground />
-      <Nav setupCount={stats.setupCount} totalLikes={stats.totalLikes} />
-      <div style={{ position: 'relative', zIndex: 1, paddingTop: 24 }}>
-        <FeedTabs setups={setups} components={components} />
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Nav setupCount={stats.setupCount} totalLikes={stats.totalLikes} />
+        <div style={{ position: 'relative', zIndex: 1, paddingTop: 24, flex: 1 }}>
+          <FeedTabs setups={setups} components={components} />
+        </div>
+        <Footer />
       </div>
       <UploadModal />
       <Toast />
-      <Footer />
     </ThemeProvider>
   )
 }
