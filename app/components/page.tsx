@@ -3,10 +3,9 @@ import { ThemeProvider } from '@/components/ThemeProvider'
 import AnimatedBackground from '@/components/AnimatedBackground'
 import Nav from '@/components/Nav'
 import ComponentsList from '@/components/ComponentsList'
-
+import Footer from '@/components/Footer'
 export const revalidate = 0
 export const dynamic = 'force-dynamic'
-
 export type ComponentIndexRow = {
   id: string
   normalized_name: string
@@ -14,7 +13,6 @@ export type ComponentIndexRow = {
   category: string | null
   setup_count: number
 }
-
 async function getComponents(): Promise<ComponentIndexRow[]> {
   const { data, error } = await supabase
     .from('component_index')
@@ -23,10 +21,8 @@ async function getComponents(): Promise<ComponentIndexRow[]> {
   if (error) { console.error(error); return [] }
   return data || []
 }
-
 export default async function ComponentsPage() {
   const components = await getComponents()
-
   return (
     <ThemeProvider>
       <AnimatedBackground />
@@ -45,6 +41,7 @@ export default async function ComponentsPage() {
         </div>
         <ComponentsList components={components} />
       </div>
+      <Footer />
     </ThemeProvider>
   )
 }
