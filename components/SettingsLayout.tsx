@@ -69,11 +69,13 @@ export default function SettingsLayout() {
   const [resendingConfirmation, setResendingConfirmation] = useState(false)
 
   // Cuenta: cambiar contraseña
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [changingPassword, setChangingPassword] = useState(false)
 
   // Cuenta: cambiar email
+  const [showEmailForm, setShowEmailForm] = useState(false)
   const [newEmail, setNewEmail] = useState('')
   const [changingEmail, setChangingEmail] = useState(false)
 
@@ -147,6 +149,7 @@ export default function SettingsLayout() {
       toastSuccess('Contraseña actualizada')
       setNewPassword('')
       setConfirmPassword('')
+      setShowPasswordForm(false)
     } catch (err: unknown) {
       toastError(err instanceof Error ? err.message : 'Error al cambiar la contraseña')
     } finally {
@@ -166,6 +169,7 @@ export default function SettingsLayout() {
       if (error) throw error
       toastSuccess('Te hemos enviado un correo a la nueva dirección. Confírmalo para completar el cambio.')
       setNewEmail('')
+      setShowEmailForm(false)
     } catch (err: unknown) {
       toastError(err instanceof Error ? err.message : 'Error al cambiar el email')
     } finally {
@@ -241,7 +245,40 @@ export default function SettingsLayout() {
                 <div style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>{username}</div>
               </div>
 
-              <div style={{ marginBottom: 24 }}>
+              <div style={{ marginBottom: 28 }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Tu tag</label>
+                {profileTag === 'Founder' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700,
+                      background: TAG_STYLES['Founder'].bg, border: `1px solid ${TAG_STYLES['Founder'].border}`,
+                      color: TAG_STYLES['Founder'].color, padding: '2px 10px', borderRadius: 50,
+                      boxShadow: `0 0 8px ${TAG_STYLES['Founder'].border}`, letterSpacing: '0.3px',
+                    }}>★ Founder</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>El tag Founder no se puede cambiar</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {TAGS.map(t => (
+                    <button key={t} onClick={() => { setRoleTag(t); saveProfile({ role_tag: t }) }} style={{
+                      padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                      background: roleTag === t ? TAG_STYLES[t].bg : 'var(--surface2)',
+                      border: `1px solid ${roleTag === t ? TAG_STYLES[t].border : 'var(--border)'}`,
+                      color: roleTag === t ? TAG_STYLES[t].color : 'var(--text-muted)',
+                      transition: 'all 0.18s',
+                    }}>{t}</button>
+                  ))}
+                  {roleTag && (
+                    <button onClick={() => { setRoleTag(''); saveProfile({ role_tag: null }) }} style={{ padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>Sin tag</button>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ paddingTop: 24, borderTop: '1px solid var(--border)', marginBottom: 8 }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 800, color: 'var(--text)', letterSpacing: '0.3px' }}>Seguridad</h3>
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Email</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>{email}</span>
@@ -274,68 +311,61 @@ export default function SettingsLayout() {
                 </div>
               </div>
 
-              <div style={{ marginBottom: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Cambiar contraseña</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 360 }}>
-                  <input
-                    type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                    placeholder="Nueva contraseña" style={inputStyle}
-                  />
-                  <input
-                    type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-                    placeholder="Confirmar nueva contraseña" style={inputStyle}
-                  />
-                  <button onClick={handleChangePassword} disabled={changingPassword} className="btn-primary"
-                    style={{ fontSize: 13, padding: '9px 0', opacity: changingPassword ? 0.6 : 1, alignSelf: 'flex-start', minWidth: 160 }}>
-                    {changingPassword ? 'Guardando...' : 'Actualizar contraseña'}
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Cambiar email</label>
-                <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>
-                  Te enviaremos un correo a la nueva dirección para confirmar el cambio. Hasta que lo confirmes, seguirás iniciando sesión con el email actual.
-                </p>
-                <div style={{ display: 'flex', gap: 8, maxWidth: 360 }}>
-                  <input
-                    type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
-                    placeholder="nuevo@email.com" style={inputStyle}
-                  />
-                  <button onClick={handleChangeEmail} disabled={changingEmail} className="btn-primary"
-                    style={{ fontSize: 13, padding: '0 18px', flexShrink: 0, opacity: changingEmail ? 0.6 : 1 }}>
-                    {changingEmail ? '...' : 'Cambiar'}
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ paddingTop: 20, borderTop: '1px solid var(--border)' }}>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Tu tag</label>
-                {profileTag === 'Founder' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700,
-                      background: TAG_STYLES['Founder'].bg, border: `1px solid ${TAG_STYLES['Founder'].border}`,
-                      color: TAG_STYLES['Founder'].color, padding: '2px 10px', borderRadius: 50,
-                      boxShadow: `0 0 8px ${TAG_STYLES['Founder'].border}`, letterSpacing: '0.3px',
-                    }}>★ Founder</span>
-                    <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>El tag Founder no se puede cambiar</span>
+              <div style={{ marginBottom: 16 }}>
+                <button onClick={() => setShowEmailForm(v => !v)} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 360,
+                  background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                  padding: '10px 14px', cursor: 'pointer', color: 'var(--text)', fontFamily: 'var(--font-display)',
+                  fontSize: 13, fontWeight: 700,
+                }}>
+                  Cambiar email
+                  <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>{showEmailForm ? '▲' : '▼'}</span>
+                </button>
+                {showEmailForm && (
+                  <div style={{ marginTop: 10, maxWidth: 360 }}>
+                    <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>
+                      Te enviaremos un correo a la nueva dirección para confirmar el cambio. Hasta que lo confirmes, seguirás iniciando sesión con el email actual.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                        placeholder="nuevo@email.com" style={inputStyle}
+                      />
+                      <button onClick={handleChangeEmail} disabled={changingEmail} className="btn-primary"
+                        style={{ fontSize: 13, padding: '0 18px', flexShrink: 0, opacity: changingEmail ? 0.6 : 1 }}>
+                        {changingEmail ? '...' : 'Cambiar'}
+                      </button>
+                    </div>
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {TAGS.map(t => (
-                    <button key={t} onClick={() => { setRoleTag(t); saveProfile({ role_tag: t }) }} style={{
-                      padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                      background: roleTag === t ? TAG_STYLES[t].bg : 'var(--surface2)',
-                      border: `1px solid ${roleTag === t ? TAG_STYLES[t].border : 'var(--border)'}`,
-                      color: roleTag === t ? TAG_STYLES[t].color : 'var(--text-muted)',
-                      transition: 'all 0.18s',
-                    }}>{t}</button>
-                  ))}
-                  {roleTag && (
-                    <button onClick={() => { setRoleTag(''); saveProfile({ role_tag: null }) }} style={{ padding: '6px 14px', borderRadius: 50, cursor: 'pointer', fontSize: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>Sin tag</button>
-                  )}
-                </div>
+              </div>
+
+              <div>
+                <button onClick={() => setShowPasswordForm(v => !v)} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 360,
+                  background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                  padding: '10px 14px', cursor: 'pointer', color: 'var(--text)', fontFamily: 'var(--font-display)',
+                  fontSize: 13, fontWeight: 700,
+                }}>
+                  Cambiar contraseña
+                  <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>{showPasswordForm ? '▲' : '▼'}</span>
+                </button>
+                {showPasswordForm && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 360, marginTop: 10 }}>
+                    <input
+                      type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                      placeholder="Nueva contraseña" style={inputStyle}
+                    />
+                    <input
+                      type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                      placeholder="Confirmar nueva contraseña" style={inputStyle}
+                    />
+                    <button onClick={handleChangePassword} disabled={changingPassword} className="btn-primary"
+                      style={{ fontSize: 13, padding: '9px 0', opacity: changingPassword ? 0.6 : 1, alignSelf: 'flex-start', minWidth: 160 }}>
+                      {changingPassword ? 'Guardando...' : 'Actualizar contraseña'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
