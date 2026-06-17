@@ -342,6 +342,20 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             }
           })
           .catch(() => {})
+
+        // Cargar los setups que el usuario ya ha likeado via API
+        fetch('/api/likes', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+          .then(r => r.json())
+          .then(({ likedIds }) => {
+            if (likedIds?.length > 0) {
+              const alreadyLiked: Record<string, boolean> = {}
+              likedIds.forEach((id: string) => { alreadyLiked[id] = true })
+              setLiked(alreadyLiked)
+            }
+          })
+          .catch(() => {})
       }
     })
     const initialLikes: Record<string, number> = {}
@@ -415,7 +429,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     try {
       const res = await fetch('/api/likes', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: setupId, action: newLiked ? 'like' : 'unlike' }),
+        body: JSON.stringify({ id: setupId, action: newLiked ? 'like' : 'unlike', sessionToken }),
       })
       const data = await res.json()
       if (data.likes !== undefined) setLikes(prev => ({ ...prev, [setupId]: data.likes }))
