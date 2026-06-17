@@ -1,9 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase, ACCENT_COLORS, AccentColor } from '@/lib/supabase'
+import { supabase, ACCENT_COLORS, AccentColor, Setup } from '@/lib/supabase'
 import { toastSuccess, toastError } from './Toast'
 import { confirm } from './ConfirmModal'
+import SetupCard from './SetupCard'
 
 const TAGS = ['Gamer', 'Streamer', 'Developer', 'Content Creator']
 
@@ -94,6 +95,11 @@ export default function SettingsLayout() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deletingAccount, setDeletingAccount] = useState(false)
+
+  // Setups likeados
+  const [likedSetups, setLikedSetups] = useState<Setup[]>([])
+  const [likedLoading, setLikedLoading] = useState(false)
+  const [likedLoaded, setLikedLoaded] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -261,6 +267,34 @@ export default function SettingsLayout() {
       setDeletingAccount(false)
     }
   }
+
+  async function loadLikedSetups() {
+    if (likedLoaded) return
+    setLikedLoading(true)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      const res = await fetch('/api/likes', { headers: { Authorization: `Bearer ${token}` } })
+      const { likedIds } = await res.json()
+
+      if (likedIds?.length > 0) {
+        const { data } = await supabase
+          .from('setups').select('*').in('id', likedIds).order('created_at', { ascending: false })
+        setLikedSetups(data || [])
+      } else {
+        setLikedSetups([])
+      }
+    } catch {
+      setLikedSetups([])
+    } finally {
+      setLikedLoading(false)
+      setLikedLoaded(true)
+    }
+  }
+
+  useEffect(() => {
+    if (activeSection === 'liked') loadLikedSetups()
+  }, [activeSection])
 
   if (loading) {
     return (
@@ -444,10 +478,22 @@ export default function SettingsLayout() {
           {activeSection === 'liked' && (
             <div>
               <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>Setups Likeados</h2>
-              <div style={{ textAlign: 'center', padding: '50px 24px', background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-dim)' }}>
-                <div style={{ fontSize: 36, marginBottom: 12 }}>♡</div>
-                Próximamente: aquí verás todos los setups que has marcado con like.
-              </div>
+              {likedLoading ? (
+                <div style={{ textAlign: 'center', padding: '50px 24px', color: 'var(--text-dim)' }}>Cargando...</div>
+              ) : likedSetups.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '50px 24px', background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-dim)' }}>
+                  <div style={{ fontSize: 36, marginBottom: 12 }}>♡</div>
+                  Aún no has dado like a ningún setup. Cuando lo hagas, aparecerán aquí.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+                  {likedSetups.map(s => (
+                    <div key={s.id} style={{ width: 240 }}>
+                      <SetupCard setup={s} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
