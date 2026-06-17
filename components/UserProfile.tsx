@@ -523,7 +523,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     if (!componentText.trim()) return
     setScanning(true); setScanResults([]); setScanDone(false)
     try {
-      const res = await fetch('/api/components', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: componentText }) })
+      const res = await fetch('/api/components', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: componentText, sessionToken }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setScanResults(data.components); setScanDone(true)
@@ -539,7 +539,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         const dataUrl = e.target?.result as string
         const base64 = dataUrl.split(',')[1]
         const mediaType = dataUrl.split(';')[0].split(':')[1]
-        const res = await fetch('/api/components', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64: base64, mediaType }) })
+        const res = await fetch('/api/components', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64: base64, mediaType, sessionToken }) })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
         setScanResults(prev => [...prev, ...data.components]); setScanDone(true); setPhotoScanning(false)
