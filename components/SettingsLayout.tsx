@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, ACCENT_COLORS, AccentColor } from '@/lib/supabase'
 import { toastSuccess, toastError } from './Toast'
+import { confirm } from './ConfirmModal'
 
 const TAGS = ['Gamer', 'Streamer', 'Developer', 'Content Creator']
 
@@ -88,6 +89,11 @@ export default function SettingsLayout() {
 
   const [saving, setSaving] = useState(false)
   const [exporting, setExporting] = useState(false)
+
+  // Cuenta: eliminar cuenta
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -222,6 +228,37 @@ export default function SettingsLayout() {
       toastError(err instanceof Error ? err.message : 'Error al exportar los datos')
     } finally {
       setExporting(false)
+    }
+  }
+
+  async function handleDeleteAccountClick() {
+    const ok = await confirm({
+      title: '¿Eliminar tu cuenta?',
+      message: 'Esta acción es permanente: se borrará tu perfil, todos tus setups y sus fotos, y no podrás recuperarlos. ¿Quieres continuar?',
+      confirmLabel: 'Sí, continuar', cancelLabel: 'Cancelar', danger: true,
+    })
+    if (ok) setShowDeleteConfirm(true)
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmText.trim().toLowerCase() !== username.toLowerCase()) return
+    setDeletingAccount(true)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const sessionToken = sessionData.session?.access_token
+      const res = await fetch('/api/account', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionToken }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      await supabase.auth.signOut()
+      toastSuccess('Tu cuenta ha sido eliminada')
+      router.push('/')
+    } catch (err: unknown) {
+      toastError(err instanceof Error ? err.message : 'Error al eliminar la cuenta')
+    } finally {
+      setDeletingAccount(false)
     }
   }
 
@@ -476,11 +513,49 @@ export default function SettingsLayout() {
               </div>
 
               <div style={{ paddingTop: 20, borderTop: '1px solid var(--border)' }}>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Eliminar cuenta</label>
-                <div style={{ textAlign: 'center', padding: '40px 24px', background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-dim)' }}>
-                  <div style={{ fontSize: 32, marginBottom: 10 }}>🔒</div>
-                  Próximamente: eliminar tu cuenta de forma permanente.
-                </div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#ff4d6d', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Eliminar cuenta</label>
+                <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 12, maxWidth: 480 }}>
+                  Esto borra tu perfil, todos tus setups y sus fotos, y tu acceso a Stationly. No se puede deshacer.
+                </p>
+
+                {!showDeleteConfirm ? (
+                  <button onClick={handleDeleteAccountClick} style={{
+                    fontSize: 13, padding: '10px 18px', background: 'rgba(255,77,109,0.1)',
+                    border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', borderRadius: 50,
+                    cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 600,
+                  }}>
+                    🗑 Eliminar mi cuenta
+                  </button>
+                ) : (
+                  <div style={{
+                    background: 'rgba(255,77,109,0.06)', border: '1px solid rgba(255,77,109,0.3)',
+                    borderRadius: 'var(--radius-sm)', padding: 16, maxWidth: 420,
+                  }}>
+                    <p style={{ fontSize: 12, color: 'var(--text)', marginBottom: 10 }}>
+                      Para confirmar, escribe tu nombre de usuario (<strong>{username}</strong>):
+                    </p>
+                    <input
+                      value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)}
+                      placeholder={username} style={{ ...inputStyle, marginBottom: 10 }}
+                    />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={handleDeleteAccount}
+                        disabled={deletingAccount || deleteConfirmText.trim().toLowerCase() !== username.toLowerCase()}
+                        style={{
+                          fontSize: 13, padding: '9px 16px', background: '#ff4d6d', border: 'none',
+                          color: '#fff', borderRadius: 50, cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 700,
+                          opacity: (deletingAccount || deleteConfirmText.trim().toLowerCase() !== username.toLowerCase()) ? 0.4 : 1,
+                        }}
+                      >
+                        {deletingAccount ? 'Eliminando...' : 'Eliminar cuenta permanentemente'}
+                      </button>
+                      <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText('') }} className="btn-secondary" style={{ fontSize: 13 }}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
