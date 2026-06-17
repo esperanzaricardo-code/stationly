@@ -63,6 +63,20 @@ export default function SettingsLayout() {
   const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState('')
 
+  // Cuenta: email y verificación
+  const [email, setEmail] = useState('')
+  const [emailConfirmed, setEmailConfirmed] = useState(true)
+  const [resendingConfirmation, setResendingConfirmation] = useState(false)
+
+  // Cuenta: cambiar contraseña
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [changingPassword, setChangingPassword] = useState(false)
+
+  // Cuenta: cambiar email
+  const [newEmail, setNewEmail] = useState('')
+  const [changingEmail, setChangingEmail] = useState(false)
+
   // Datos del perfil
   const [profileTag, setProfileTag] = useState<string | null>(null)
   const [roleTag, setRoleTag] = useState<string>('')
@@ -81,6 +95,8 @@ export default function SettingsLayout() {
       }
       const uname = user.user_metadata?.username || user.email?.split('@')[0] || ''
       setUsername(uname)
+      setEmail(user.email || '')
+      setEmailConfirmed(!!user.email_confirmed_at)
 
       supabase.from('profiles')
         .select('tag, role_tag, amazon_affiliate_id, show_pccomponentes, app_accent_color')
@@ -113,6 +129,62 @@ export default function SettingsLayout() {
     applyAppColor(color)
     try { localStorage.setItem('stationly-app-color', color) } catch {}
     await saveProfile({ app_accent_color: color })
+  }
+
+  async function handleChangePassword() {
+    if (newPassword.length < 6) {
+      toastError('La contraseña debe tener al menos 6 caracteres')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toastError('Las contraseñas no coinciden')
+      return
+    }
+    setChangingPassword(true)
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) throw error
+      toastSuccess('Contraseña actualizada')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err: unknown) {
+      toastError(err instanceof Error ? err.message : 'Error al cambiar la contraseña')
+    } finally {
+      setChangingPassword(false)
+    }
+  }
+
+  async function handleChangeEmail() {
+    const trimmed = newEmail.trim()
+    if (!trimmed || !trimmed.includes('@')) {
+      toastError('Introduce un email válido')
+      return
+    }
+    setChangingEmail(true)
+    try {
+      const { error } = await supabase.auth.updateUser({ email: trimmed })
+      if (error) throw error
+      toastSuccess('Te hemos enviado un correo a la nueva dirección. Confírmalo para completar el cambio.')
+      setNewEmail('')
+    } catch (err: unknown) {
+      toastError(err instanceof Error ? err.message : 'Error al cambiar el email')
+    } finally {
+      setChangingEmail(false)
+    }
+  }
+
+  async function handleResendConfirmation() {
+    if (!email) return
+    setResendingConfirmation(true)
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email })
+      if (error) throw error
+      toastSuccess('Correo de verificación reenviado')
+    } catch (err: unknown) {
+      toastError(err instanceof Error ? err.message : 'Error al reenviar el correo')
+    } finally {
+      setResendingConfirmation(false)
+    }
   }
 
   if (loading) {
@@ -169,7 +241,75 @@ export default function SettingsLayout() {
                 <div style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>{username}</div>
               </div>
 
-              <div>
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Email</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>{email}</span>
+                  {emailConfirmed ? (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700,
+                      background: 'rgba(45,212,191,0.12)', border: '1px solid rgba(45,212,191,0.3)',
+                      color: '#2dd4bf', padding: '2px 10px', borderRadius: 50,
+                    }}>
+                      ✓ Verificado
+                    </span>
+                  ) : (
+                    <>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700,
+                        background: 'rgba(255,184,77,0.12)', border: '1px solid rgba(255,184,77,0.3)',
+                        color: '#ffb84d', padding: '2px 10px', borderRadius: 50,
+                      }}>
+                        ⚠ No verificado
+                      </span>
+                      <button onClick={handleResendConfirmation} disabled={resendingConfirmation} style={{
+                        background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)',
+                        fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 50, cursor: 'pointer',
+                        opacity: resendingConfirmation ? 0.6 : 1,
+                      }}>
+                        {resendingConfirmation ? 'Enviando...' : 'Reenviar correo de verificación'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Cambiar contraseña</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 360 }}>
+                  <input
+                    type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                    placeholder="Nueva contraseña" style={inputStyle}
+                  />
+                  <input
+                    type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="Confirmar nueva contraseña" style={inputStyle}
+                  />
+                  <button onClick={handleChangePassword} disabled={changingPassword} className="btn-primary"
+                    style={{ fontSize: 13, padding: '9px 0', opacity: changingPassword ? 0.6 : 1, alignSelf: 'flex-start', minWidth: 160 }}>
+                    {changingPassword ? 'Guardando...' : 'Actualizar contraseña'}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Cambiar email</label>
+                <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>
+                  Te enviaremos un correo a la nueva dirección para confirmar el cambio. Hasta que lo confirmes, seguirás iniciando sesión con el email actual.
+                </p>
+                <div style={{ display: 'flex', gap: 8, maxWidth: 360 }}>
+                  <input
+                    type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                    placeholder="nuevo@email.com" style={inputStyle}
+                  />
+                  <button onClick={handleChangeEmail} disabled={changingEmail} className="btn-primary"
+                    style={{ fontSize: 13, padding: '0 18px', flexShrink: 0, opacity: changingEmail ? 0.6 : 1 }}>
+                    {changingEmail ? '...' : 'Cambiar'}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ paddingTop: 20, borderTop: '1px solid var(--border)' }}>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Tu tag</label>
                 {profileTag === 'Founder' && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -262,7 +402,7 @@ export default function SettingsLayout() {
               <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>Privacidad y datos</h2>
               <div style={{ textAlign: 'center', padding: '50px 24px', background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-dim)' }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
-                Próximamente: cambiar contraseña, eliminar cuenta y exportar tus datos.
+                Próximamente: eliminar cuenta y exportar tus datos.
               </div>
             </div>
           )}
