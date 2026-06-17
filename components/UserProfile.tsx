@@ -609,31 +609,32 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
 
     setSaving(true)
     try {
-      let image_url = setup.image_url
+      const formData = new FormData()
+      formData.append('setupId', setup.id)
+      formData.append('sessionToken', sessionToken)
+      formData.append('title', editTitle)
+      formData.append('category', editCategories.join(', '))
+      formData.append('components', JSON.stringify(editComponents.filter(c => c.name.trim())))
+      formData.append('pins', JSON.stringify(editPins.filter(p => p.name.trim())))
+      formData.append('accent_color', editAccentColor)
+
+      // Si hay una foto nueva, se manda el archivo al servidor para que la
+      // modere ANTES de subirla a Storage. Si no hay foto nueva, no se envía
+      // nada y el servidor deja la foto actual del setup intacta.
       if (newImageFile && newImagePreview) {
-        const res = await fetch(newImagePreview)
-        const blob = await res.blob()
-        const ext = newImageFile.name.split('.').pop() || 'jpg'
-        const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-        const arrayBuffer = await blob.arrayBuffer()
-        const buffer = new Uint8Array(arrayBuffer)
-        const { error: uploadError } = await supabase.storage.from('setups').upload(filename, buffer, { contentType: 'image/jpeg', upsert: false })
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('setups').getPublicUrl(filename)
-          image_url = urlData.publicUrl
-        }
+        const blobRes = await fetch(newImagePreview)
+        const blob = await blobRes.blob()
+        formData.append('image', blob, newImageFile.name || 'setup.jpg')
       }
-      const updates = {
-        title: editTitle, category: editCategories.join(', '),
-        components: editComponents.filter(c => c.name.trim()),
-        pins: editPins.filter(p => p.name.trim()),
-        image_url, accent_color: editAccentColor,
-      }
-      const res = await fetch('/api/setups', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ setupId: setup.id, sessionToken, updates }) })
+
+      const res = await fetch('/api/setups', { method: 'PUT', body: formData })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
+
       clearDraft(setup.id)
-      setSetups(prev => prev.map((s, i) => i === activeSetup ? { ...s, ...updates, image_url: image_url ?? s.image_url } : s))
+      // El servidor devuelve el setup ya actualizado (incluida la foto, si cambió
+      // y pasó la moderación), así que sincronizamos el estado local con esa respuesta.
+      setSetups(prev => prev.map((s, i) => i === activeSetup ? { ...s, ...data } : s))
       applyAccentColor(editAccentColor)
       toastSuccess('¡Setup guardado!')
       setEditing(false); setNewImageFile(null); setNewImagePreview(null); setRawImagePreview(null)
