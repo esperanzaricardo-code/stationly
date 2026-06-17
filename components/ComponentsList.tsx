@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { ComponentIndexRow } from '@/app/components/page'
 
@@ -66,6 +66,32 @@ function makePcComponentesLink(name: string): string {
 
 export default function ComponentsList({ components }: { components: ComponentIndexRow[] }) {
   const [activeCategory, setActiveCategory] = useState('all')
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  function updateScrollState() {
+    const el = scrollRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 4)
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
+  }
+
+  useEffect(() => {
+    updateScrollState()
+    const el = scrollRef.current
+    if (!el) return
+    el.addEventListener('scroll', updateScrollState)
+    window.addEventListener('resize', updateScrollState)
+    return () => {
+      el.removeEventListener('scroll', updateScrollState)
+      window.removeEventListener('resize', updateScrollState)
+    }
+  }, [])
+
+  function scrollByAmount(amount: number) {
+    scrollRef.current?.scrollBy({ left: amount, behavior: 'smooth' })
+  }
 
   const filtered = activeCategory === 'all'
     ? components
@@ -73,30 +99,81 @@ export default function ComponentsList({ components }: { components: ComponentIn
 
   return (
     <div>
-      <div style={{
-        position: 'relative', zIndex: 1,
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '0 24px 28px', maxWidth: 1800, margin: '0 auto',
-        overflowX: 'auto', scrollbarWidth: 'none',
-      }}>
-        {CATEGORY_FILTERS.map(f => (
-          <button
-            key={f.key}
-            onClick={() => setActiveCategory(f.key)}
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 1800, margin: '0 auto', padding: '0 24px 28px' }}>
+        <div style={{ position: 'relative' }}>
+          <div
+            ref={scrollRef}
             style={{
-              flexShrink: 0,
-              background: activeCategory === f.key ? 'linear-gradient(135deg, var(--accent), var(--accent2))' : 'var(--surface2)',
-              border: `1px solid ${activeCategory === f.key ? 'transparent' : 'var(--border)'}`,
-              color: activeCategory === f.key ? 'var(--accent-fg, #0a0a0b)' : 'var(--text-muted)',
-              fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: activeCategory === f.key ? 700 : 500,
-              padding: '7px 16px', borderRadius: 50, cursor: 'pointer',
-              transition: 'all 0.18s', whiteSpace: 'nowrap',
-              boxShadow: activeCategory === f.key ? `0 2px 12px var(--accent-glow)` : 'none',
+              display: 'flex', alignItems: 'center', gap: 8,
+              overflowX: 'auto', scrollbarWidth: 'none',
             }}
           >
-            {f.label}
-          </button>
-        ))}
+            {CATEGORY_FILTERS.map(f => (
+              <button
+                key={f.key}
+                onClick={() => setActiveCategory(f.key)}
+                style={{
+                  flexShrink: 0,
+                  background: activeCategory === f.key ? 'linear-gradient(135deg, var(--accent), var(--accent2))' : 'var(--surface2)',
+                  border: `1px solid ${activeCategory === f.key ? 'transparent' : 'var(--border)'}`,
+                  color: activeCategory === f.key ? 'var(--accent-fg, #0a0a0b)' : 'var(--text-muted)',
+                  fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: activeCategory === f.key ? 700 : 500,
+                  padding: '7px 16px', borderRadius: 50, cursor: 'pointer',
+                  transition: 'all 0.18s', whiteSpace: 'nowrap',
+                  boxShadow: activeCategory === f.key ? `0 2px 12px var(--accent-glow)` : 'none',
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {canScrollLeft && (
+            <div style={{
+              position: 'absolute', top: 0, bottom: 0, left: 0, width: 56,
+              display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+              background: 'linear-gradient(to right, var(--bg) 30%, transparent)',
+              pointerEvents: 'none',
+            }}>
+              <button
+                onClick={() => scrollByAmount(-240)}
+                aria-label="Ver categorías anteriores"
+                style={{
+                  pointerEvents: 'auto',
+                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                  background: 'var(--surface2)', border: '1px solid var(--border)',
+                  color: 'var(--text)', fontSize: 14, fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                ‹
+              </button>
+            </div>
+          )}
+
+          {canScrollRight && (
+            <div style={{
+              position: 'absolute', top: 0, bottom: 0, right: 0, width: 56,
+              display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+              background: 'linear-gradient(to left, var(--bg) 30%, transparent)',
+              pointerEvents: 'none',
+            }}>
+              <button
+                onClick={() => scrollByAmount(240)}
+                aria-label="Ver más categorías"
+                style={{
+                  pointerEvents: 'auto',
+                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                  background: 'var(--surface2)', border: '1px solid var(--border)',
+                  color: 'var(--text)', fontSize: 14, fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                ›
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Listado */}
