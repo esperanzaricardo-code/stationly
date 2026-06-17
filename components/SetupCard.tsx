@@ -73,6 +73,16 @@ export default function SetupCard({ setup }: { setup: Setup }) {
               if (reportedIds?.includes(setup.id)) setReported(true)
             })
             .catch(() => {})
+
+          // Cargar si ya le dio like a este setup via API
+          fetch('/api/likes', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+            .then(r => r.json())
+            .then(({ likedIds }) => {
+              if (likedIds?.includes(setup.id)) setLiked(true)
+            })
+            .catch(() => {})
         }
       })
     })
@@ -99,7 +109,7 @@ export default function SetupCard({ setup }: { setup: Setup }) {
       const res = await fetch('/api/likes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: setup.id, action: newLiked ? 'like' : 'unlike' }),
+        body: JSON.stringify({ id: setup.id, action: newLiked ? 'like' : 'unlike', sessionToken }),
       })
       const data = await res.json()
       if (data.likes !== undefined) setLikes(data.likes)
