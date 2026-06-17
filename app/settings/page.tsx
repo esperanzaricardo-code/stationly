@@ -3,6 +3,7 @@ import AnimatedBackground from '@/components/AnimatedBackground'
 import Nav from '@/components/Nav'
 import SettingsLayout from '@/components/SettingsLayout'
 import Footer from '@/components/Footer'
+import ConfirmModal from '@/components/ConfirmModal'
 export const revalidate = 0
 export const dynamic = 'force-dynamic'
 export default function SettingsPage() {
@@ -16,6 +17,7 @@ export default function SettingsPage() {
         </div>
         <Footer />
       </div>
+      <ConfirmModal />
     </ThemeProvider>
   )
 }
