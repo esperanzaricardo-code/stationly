@@ -39,9 +39,13 @@ export default async function ComponentDetailPage({ params }: { params: { id: st
   return (
     <ThemeProvider>
       <AnimatedBackground />
-      <Nav />
-      <ComponentDetail component={component} setups={setups} />
-      <Footer />
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Nav />
+        <div style={{ flex: 1 }}>
+          <ComponentDetail component={component} setups={setups} />
+        </div>
+        <Footer />
+      </div>
     </ThemeProvider>
   )
 }
