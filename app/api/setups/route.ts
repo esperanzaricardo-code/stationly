@@ -199,7 +199,15 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const { setupId, sessionToken, updates } = await req.json()
+    const formData = await req.formData()
+    const setupId       = formData.get('setupId') as string
+    const sessionToken   = formData.get('sessionToken') as string
+    const title          = formData.get('title') as string
+    const category       = formData.get('category') as string
+    const componentsRaw  = formData.get('components') as string
+    const pinsRaw         = formData.get('pins') as string
+    const accentColor     = formData.get('accent_color') as string
+    const file             = formData.get('image') as File | null
 
     if (!sessionToken) {
       return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 })
@@ -220,6 +228,42 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'No tienes permiso para editar este setup' }, { status: 403 })
     }
 
+    const updates: Record<string, unknown> = {
+      title,
+      category,
+      components: componentsRaw ? JSON.parse(componentsRaw) : [],
+      pins: pinsRaw ? JSON.parse(pinsRaw) : [],
+      accent_color: accentColor,
+    }
+
+    // Si llega una foto nueva, se modera ANTES de subirla a Storage.
+    // Si no es segura, se rechaza la edición entera y la imagen nunca se sube.
+    if (file && file.size > 0) {
+      const arrayBuffer = await file.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
+      const base64 = buffer.toString('base64')
+      const mediaType = file.type || 'image/jpeg'
+
+      const moderation = await moderateImage(base64, mediaType)
+      if (!moderation.safe) {
+        return NextResponse.json(
+          { error: moderation.reason || 'La imagen no cumple las normas de la comunidad.' },
+          { status: 400 }
+        )
+      }
+
+      const ext = file.name.split('.').pop() || 'jpg'
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('setups').upload(filename, buffer, { contentType: file.type, upsert: false })
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage.from('setups').getPublicUrl(filename)
+        updates.image_url = urlData.publicUrl
+      }
+    }
+    // Si no llega foto nueva, "image_url" simplemente no se incluye en updates,
+    // así que Supabase deja la foto actual del setup intacta.
+
     const { data, error } = await supabaseAdmin
       .from('setups')
       .update(updates)
@@ -234,7 +278,7 @@ export async function PUT(req: NextRequest) {
         name: c.name,
         category: detectCategory(c.name),
       }))
-      const newComponents = (updates.components || []).map((c: { name: string }) => ({
+      const newComponents = ((updates.components as { name: string }[]) || []).map((c) => ({
         name: c.name,
         category: detectCategory(c.name),
       }))
