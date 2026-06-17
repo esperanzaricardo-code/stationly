@@ -6,10 +6,9 @@ import UserProfile from '@/components/UserProfile'
 import UploadModal from '@/components/UploadModal'
 import Toast from '@/components/Toast'
 import ConfirmModal from '@/components/ConfirmModal'
-
+import Footer from '@/components/Footer'
 export const revalidate = 0
 export const dynamic = 'force-dynamic'
-
 async function getUserSetups(username: string): Promise<Setup[]> {
   const decoded = decodeURIComponent(username)
   const { data, error } = await supabase
@@ -20,7 +19,6 @@ async function getUserSetups(username: string): Promise<Setup[]> {
   if (error || !data) return []
   return data
 }
-
 export default async function UserPage({
   params,
   searchParams,
@@ -38,6 +36,7 @@ export default async function UserPage({
       <UploadModal />
       <Toast />
       <ConfirmModal />
+      <Footer />
     </ThemeProvider>
   )
 }
