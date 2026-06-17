@@ -5,11 +5,10 @@ import Nav from '@/components/Nav'
 import FeedTabs from '@/components/FeedTabs'
 import UploadModal from '@/components/UploadModal'
 import Toast from '@/components/Toast'
+import Footer from '@/components/Footer'
 import { ComponentIndexRow } from '@/app/components/page'
-
 export const revalidate = 0
 export const dynamic = 'force-dynamic'
-
 async function getSetups(): Promise<Setup[]> {
   const { data, error } = await supabase
     .from('setups').select('*')
@@ -17,7 +16,6 @@ async function getSetups(): Promise<Setup[]> {
   if (error) { console.error(error); return [] }
   return data || []
 }
-
 async function getStats() {
   const { count: setupCount } = await supabase
     .from('setups').select('*', { count: 'exact', head: true })
@@ -25,7 +23,6 @@ async function getStats() {
   const totalLikes = likesData?.reduce((a, s) => a + (s.likes || 0), 0) || 0
   return { setupCount: setupCount || 0, totalLikes }
 }
-
 async function getComponents(): Promise<ComponentIndexRow[]> {
   const { data, error } = await supabase
     .from('component_index')
@@ -34,7 +31,6 @@ async function getComponents(): Promise<ComponentIndexRow[]> {
   if (error) { console.error(error); return [] }
   return data || []
 }
-
 export default async function FeedPage() {
   const [setups, stats, components] = await Promise.all([getSetups(), getStats(), getComponents()])
   return (
@@ -46,6 +42,7 @@ export default async function FeedPage() {
       </div>
       <UploadModal />
       <Toast />
+      <Footer />
     </ThemeProvider>
   )
 }
