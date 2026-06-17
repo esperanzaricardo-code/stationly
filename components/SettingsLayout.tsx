@@ -87,6 +87,7 @@ export default function SettingsLayout() {
   const [appColor, setAppColor] = useState<AccentColor>('lime')
 
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -188,6 +189,39 @@ export default function SettingsLayout() {
       toastError(err instanceof Error ? err.message : 'Error al reenviar el correo')
     } finally {
       setResendingConfirmation(false)
+    }
+  }
+
+  async function handleExportData() {
+    setExporting(true)
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles').select('*').eq('username', username).single()
+      const { data: setupsData } = await supabase
+        .from('setups').select('*').ilike('user_name', username).order('created_at', { ascending: false })
+
+      const exportPayload = {
+        exportado_el: new Date().toISOString(),
+        cuenta: { usuario: username, email, email_verificado: emailConfirmed },
+        perfil: profileData || null,
+        setups: setupsData || [],
+      }
+
+      const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `stationly-datos-${username}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toastSuccess('Tus datos se han descargado')
+    } catch (err: unknown) {
+      toastError(err instanceof Error ? err.message : 'Error al exportar los datos')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -429,10 +463,24 @@ export default function SettingsLayout() {
 
           {activeSection === 'privacy' && (
             <div>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>Privacidad y datos</h2>
-              <div style={{ textAlign: 'center', padding: '50px 24px', background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-dim)' }}>
-                <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
-                Próximamente: eliminar cuenta y exportar tus datos.
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>Privacidad y datos</h2>
+
+              <div style={{ marginBottom: 28 }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Exportar mis datos</label>
+                <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10, maxWidth: 480 }}>
+                  Descarga un archivo con tu perfil y todos tus setups (título, categoría, componentes y enlaces) tal como están guardados en Stationly.
+                </p>
+                <button onClick={handleExportData} disabled={exporting} className="btn-secondary" style={{ fontSize: 13, opacity: exporting ? 0.6 : 1 }}>
+                  {exporting ? 'Preparando archivo...' : '⬇ Descargar mis datos'}
+                </button>
+              </div>
+
+              <div style={{ paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Eliminar cuenta</label>
+                <div style={{ textAlign: 'center', padding: '40px 24px', background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-dim)' }}>
+                  <div style={{ fontSize: 32, marginBottom: 10 }}>🔒</div>
+                  Próximamente: eliminar tu cuenta de forma permanente.
+                </div>
               </div>
             </div>
           )}
