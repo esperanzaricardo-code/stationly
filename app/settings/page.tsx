@@ -9,9 +9,13 @@ export default function SettingsPage() {
   return (
     <ThemeProvider>
       <AnimatedBackground />
-      <Nav />
-      <SettingsLayout />
-      <Footer />
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Nav />
+        <div style={{ flex: 1 }}>
+          <SettingsLayout />
+        </div>
+        <Footer />
+      </div>
     </ThemeProvider>
   )
 }
