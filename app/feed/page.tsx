@@ -11,7 +11,7 @@ import { ComponentIndexRow } from '@/app/components/page'
 export const revalidate = 0
 export const dynamic = 'force-dynamic'
 async function getSetups(): Promise<Setup[]> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseh
       .from('setups').select('*')
       .order('created_at', { ascending: false }).limit(100)
     if (error) { console.error(error); return [] }
@@ -42,11 +42,11 @@ export default async function FeedPage() {
                         <Nav setupCount={stats.setupCount} totalLikes={stats.totalLikes} />
                         <div style={{ position: 'relative', zIndex: 1, paddingTop: 24, flex: 1 }}>
                                   <FeedTabs setups={setups} components={components} country={country} />
-                        </div>div>
+                        </div>
                         <Footer />
-                </div>div>
+                </div>
                 <UploadModal />
                 <Toast />
-          </ThemeProvider>ThemeProvider>
+          </ThemeProvider>
         )
-}</ThemeProvider>
+}
