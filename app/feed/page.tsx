@@ -11,7 +11,7 @@ import { ComponentIndexRow } from '@/app/components/page'
 export const revalidate = 0
 export const dynamic = 'force-dynamic'
 async function getSetups(): Promise<Setup[]> {
-    const { data, error } = await supabaseh
+    const { data, error } = await supabase
       .from('setups').select('*')
       .order('created_at', { ascending: false }).limit(100)
     if (error) { console.error(error); return [] }
