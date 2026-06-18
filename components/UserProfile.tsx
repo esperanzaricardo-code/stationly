@@ -28,19 +28,28 @@ function hashStr(str: string) {
   return Math.abs(h)
 }
 
-function makeDefaultLink(component: string, shop: string, affiliateId?: string) {
+function makeDefaultLink(component: string, shop: string, affiliateId?: string, country?: string) {
   const query = component.trim().replace(/\s+/g, '+')
   if (shop === 'Amazon') {
     const tag = affiliateId || STATIONLY_AFFILIATE_ID
-    return `https://www.amazon.es/s?k=${query}&tag=${tag}`
+    let domain = 'es'
+    if (country === 'US') domain = 'com'
+    else if (country === 'MX') domain = 'com.mx'
+    else if (country === 'GB' || country === 'UK') domain = 'co.uk'
+    else if (country === 'FR') domain = 'fr'
+    else if (country === 'IT') domain = 'it'
+    else if (country === 'DE') domain = 'de'
+    return `https://www.amazon.${domain}/s?k=${query}&tag=${tag}`
   }
   if (shop === 'PcComponentes') return `https://www.pccomponentes.com/buscar/?query=${query}`
   return ''
 }
 
-function generateLinks(name: string, showPcComponentes: boolean, affiliateId?: string): ShopLink[] {
-  const links: ShopLink[] = [{ shop: 'Amazon', url: makeDefaultLink(name, 'Amazon', affiliateId) }]
-  if (showPcComponentes) links.push({ shop: 'PcComponentes', url: makeDefaultLink(name, 'PcComponentes') })
+function generateLinks(name: string, showPcComponentes: boolean, affiliateId?: string, country?: string): ShopLink[] {
+  const links: ShopLink[] = [{ shop: 'Amazon', url: makeDefaultLink(name, 'Amazon', affiliateId, country) }]
+  if (showPcComponentes && (!country || country === 'ES')) {
+    links.push({ shop: 'PcComponentes', url: makeDefaultLink(name, 'PcComponentes') })
+  }
   return links
 }
 
@@ -185,8 +194,8 @@ function RegisterPromptModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId }: {
-  peripherals: Component[]; internals: Component[]; showPcComponentes: boolean; affiliateId?: string
+function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId, country }: {
+  peripherals: Component[]; internals: Component[]; showPcComponentes: boolean; affiliateId?: string; country?: string
 }) {
   const [activeTab, setActiveTab] = useState<'peripherals' | 'internals'>(
     peripherals.length > 0 ? 'peripherals' : 'internals'
@@ -224,7 +233,7 @@ function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId 
         {items.map((comp, i) => {
           const links = comp.links?.length > 0
             ? comp.links.filter(l => l.shop !== 'MediaMarkt' && (showPcComponentes || l.shop !== 'PcComponentes'))
-            : generateLinks(comp.name, showPcComponentes, affiliateId)
+            : generateLinks(comp.name, showPcComponentes, affiliateId, country)
           return (
             <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -247,9 +256,9 @@ function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId 
   )
 }
 
-type Props = { setups: Setup[]; username: string; activeSetupId?: string }
+type Props = { setups: Setup[]; username: string; activeSetupId?: string; country?: string }
 
-export default function UserProfile({ setups: initialSetups, username, activeSetupId }: Props) {
+export default function UserProfile({ setups: initialSetups, username, activeSetupId, country }: Props) {
   const router = useRouter()
   const [setups, setSetups] = useState(initialSetups)
   const [activeSetup, setActiveSetup] = useState(() => {
@@ -549,13 +558,13 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   }
 
   function acceptComponent(comp: Component) {
-    const withLinks = { ...comp, links: generateLinks(comp.name, showPcComponentes, amazonAffiliateId), confident: undefined, did_you_mean: undefined, unknown: undefined }
+    const withLinks = { ...comp, links: generateLinks(comp.name, showPcComponentes, amazonAffiliateId, country), confident: undefined, did_you_mean: undefined, unknown: undefined }
     setEditComponents(prev => [...prev, withLinks]); setScanResults(prev => prev.filter(c => c.name !== comp.name))
   }
 
   function acceptSuggestion(comp: Component) {
     const name = comp.did_you_mean || comp.name
-    const withLinks = { name, type: comp.type, category: comp.category, links: generateLinks(name, showPcComponentes, amazonAffiliateId) }
+    const withLinks = { name, type: comp.type, category: comp.category, links: generateLinks(name, showPcComponentes, amazonAffiliateId, country) }
     setEditComponents(prev => [...prev, withLinks]); setScanResults(prev => prev.filter(c => c.name !== comp.name))
   }
 
@@ -565,7 +574,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     const confidentOnes = scanResults.filter(c => c.confident !== false && !c.unknown)
     const accepted = confidentOnes.map(comp => {
       const name = comp.did_you_mean || comp.name
-      return { name, type: comp.type, category: comp.category, links: generateLinks(name, showPcComponentes, amazonAffiliateId) }
+      return { name, type: comp.type, category: comp.category, links: generateLinks(name, showPcComponentes, amazonAffiliateId, country) }
     })
     setEditComponents(prev => [...prev, ...accepted])
     setScanResults(prev => prev.filter(c => c.confident === false || c.unknown))
@@ -576,7 +585,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   function startEditingComponent(i: number, name: string) { setEditingIndex(i); setEditingName(name) }
   function confirmEditingComponent() {
     if (editingIndex === null) return
-    setEditComponents(prev => prev.map((c, i) => i === editingIndex ? { ...c, name: editingName, links: generateLinks(editingName, showPcComponentes, amazonAffiliateId) } : c))
+    setEditComponents(prev => prev.map((c, i) => i === editingIndex ? { ...c, name: editingName, links: generateLinks(editingName, showPcComponentes, amazonAffiliateId, country) } : c))
     setEditingIndex(null); setEditingName('')
   }
 
@@ -1046,7 +1055,7 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
 
       {/* ── Tabs Periféricos / Internos ── */}
       {!editing && (peripherals.length > 0 || internals.length > 0) && (
-        <ComponentTabs peripherals={peripherals} internals={internals} showPcComponentes={showPcComponentes} affiliateId={amazonAffiliateId} />
+        <ComponentTabs peripherals={peripherals} internals={internals} showPcComponentes={showPcComponentes} affiliateId={amazonAffiliateId} country={country} />
       )}
 
       <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.5 }}>
