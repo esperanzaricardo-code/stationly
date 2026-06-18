@@ -37,12 +37,12 @@ export default async function UserPage({
                         <Nav />
                         <div style={{ flex: 1 }}>
                                   <UserProfile setups={setups} username={username} activeSetupId={searchParams.setup} country={country} />
-                        </div>div>
+                        </div>
                         <Footer />
-                </div>div>
+                </div>
                 <UploadModal />
                 <Toast />
                 <ConfirmModal />
-          </ThemeProvider>ThemeProvider>
+          </ThemeProvider>
         )
-}</ThemeProvider>
+}
