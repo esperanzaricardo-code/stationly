@@ -8,8 +8,8 @@ export default function Enter() {
   const router = useRouter()
 
   function handleSubmit() {
-    if (password === 'stationly2025') {
-      document.cookie = 'stationly_auth=stationly2025; path=/; max-age=604800'
+    if (password === (process.env.NEXT_PUBLIC_BETA_PASSWORD || 'stationly2025')) {
+            document.cookie = `stationly_auth=${process.env.NEXT_PUBLIC_BETA_PASSWORD || 'stationly2025'}; path=/; max-age=604800`
       router.push('/')
     } else {
       setError(true)
