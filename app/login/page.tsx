@@ -105,8 +105,37 @@ function LoginForm() {
     setLoading(true)
     try {
       if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
+
+        // Si el proyecto exige confirmación de email, el registro no pudo
+        // crear el profile (no había sesión todavía). Este es el primer
+        // momento en que sí la hay, así que comprobamos si falta el
+        // profile y, si es así, lo creamos ahora (asignando Founder si
+        // sigue siendo elegible). assign_founder_if_eligible es seguro
+        // de llamar más de una vez: usa ON CONFLICT internamente.
+        const loginUsername = signInData.user?.user_metadata?.username
+          || signInData.user?.email?.split('@')[0] || ''
+        const sessionToken = signInData.session?.access_token
+
+        if (loginUsername && sessionToken) {
+          const { data: existingProfile } = await supabase
+            .from('profiles').select('username').eq('username', loginUsername).single()
+
+          if (!existingProfile) {
+            try {
+              await fetch('/api/founder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: loginUsername, sessionToken }),
+              })
+            } catch {
+              // No bloqueamos el login si esto falla; el usuario podrá
+              // reintentarlo en su siguiente inicio de sesión.
+            }
+          }
+        }
+
         router.push('/feed')
       } else {
         const { data: signUpData, error } = await supabase.auth.signUp({
