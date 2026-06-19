@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import { supabase } from '@/lib/supabase'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import AnimatedBackground from '@/components/AnimatedBackground'
@@ -23,6 +24,7 @@ async function getComponents(): Promise<ComponentIndexRow[]> {
 }
 export default async function ComponentsPage() {
   const components = await getComponents()
+  const country = cookies().get('stationly_country')?.value
   return (
     <ThemeProvider>
       <AnimatedBackground />
@@ -40,7 +42,7 @@ export default async function ComponentsPage() {
               {components.length} componentes y periféricos usados por la comunidad
             </p>
           </div>
-          <ComponentsList components={components} />
+          <ComponentsList components={components} country={country} />
         </div>
         <Footer />
       </div>
