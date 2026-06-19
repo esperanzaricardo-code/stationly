@@ -8,6 +8,7 @@ import ImageCropper from './ImageCropper'
 import { toastSuccess, toastError, toastInfo } from './Toast'
 import { confirm } from './ConfirmModal'
 import ReportModal from './ReportModal'
+import { makeAmazonLink, makePcComponentesLink, showsPcComponentes } from '@/lib/amazon'
 
 const CATEGORIES = ['Gaming', 'Streaming', 'Workstation', 'Minimal', 'RGB']
 const TAGS = ['Gamer', 'Streamer', 'Developer', 'Content Creator']
@@ -20,35 +21,16 @@ const TAG_STYLES: Record<string, { bg: string; border: string; color: string }> 
   'Content Creator': { bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.3)',  color: '#fb923c' },
 }
 
-const STATIONLY_AFFILIATE_ID = process.env.NEXT_PUBLIC_AMAZON_AFFILIATE_ID || 'stationly-21'
-
 function hashStr(str: string) {
   let h = 0
   for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0
   return Math.abs(h)
 }
 
-function makeDefaultLink(component: string, shop: string, affiliateId?: string, country?: string) {
-  const query = component.trim().replace(/\s+/g, '+')
-  if (shop === 'Amazon') {
-    const tag = affiliateId || STATIONLY_AFFILIATE_ID
-    let domain = 'es'
-    if (country === 'US') domain = 'com'
-    else if (country === 'MX') domain = 'com.mx'
-    else if (country === 'GB' || country === 'UK') domain = 'co.uk'
-    else if (country === 'FR') domain = 'fr'
-    else if (country === 'IT') domain = 'it'
-    else if (country === 'DE') domain = 'de'
-    return `https://www.amazon.${domain}/s?k=${query}&tag=${tag}`
-  }
-  if (shop === 'PcComponentes') return `https://www.pccomponentes.com/buscar/?query=${query}`
-  return ''
-}
-
 function generateLinks(name: string, showPcComponentes: boolean, affiliateId?: string, country?: string): ShopLink[] {
-  const links: ShopLink[] = [{ shop: 'Amazon', url: makeDefaultLink(name, 'Amazon', affiliateId, country) }]
-  if (showPcComponentes && (!country || country === 'ES')) {
-    links.push({ shop: 'PcComponentes', url: makeDefaultLink(name, 'PcComponentes') })
+  const links: ShopLink[] = [{ shop: 'Amazon', url: makeAmazonLink(name, country, affiliateId) }]
+  if (showPcComponentes && showsPcComponentes(country)) {
+    links.push({ shop: 'PcComponentes', url: makePcComponentesLink(name) })
   }
   return links
 }
