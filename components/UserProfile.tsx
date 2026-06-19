@@ -664,7 +664,11 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             {username.slice(0, 2).toUpperCase()}
           </div>
           <div>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4 }}>{username}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', margin: 0 }}>{username}</h1>
+              {profileTag && <ProfileTag tag={profileTag} />}
+              {roleTag && <ProfileTag tag={roleTag} />}
+            </div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>0 Setups · 0 Componentes · 0 Likes</div>
           </div>
         </div>
