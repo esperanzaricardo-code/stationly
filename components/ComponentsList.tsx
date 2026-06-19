@@ -2,8 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { ComponentIndexRow } from '@/app/components/page'
-
-const STATIONLY_AFFILIATE_ID = process.env.NEXT_PUBLIC_AMAZON_AFFILIATE_ID || 'stationly-21'
+import { makeAmazonLink, makePcComponentesLink, showsPcComponentes } from '@/lib/amazon'
 
 const CATEGORY_FILTERS = [
   { key: 'all', label: 'Todos' },
@@ -38,23 +37,6 @@ const CATEGORY_ICONS: Record<string, string> = {
 function getIcon(category: string | null): string {
   if (!category) return '?'
   return CATEGORY_ICONS[category] || '?'
-}
-
-function makeAmazonLink(name: string, country?: string): string {
-  const query = name.trim().replace(/\s+/g, '+')
-  let domain = 'es'
-  if (country === 'US') domain = 'com'
-  else if (country === 'MX') domain = 'com.mx'
-  else if (country === 'GB' || country === 'UK') domain = 'co.uk'
-  else if (country === 'FR') domain = 'fr'
-  else if (country === 'IT') domain = 'it'
-  else if (country === 'DE') domain = 'de'
-  return `https://www.amazon.${domain}/s?k=${query}&tag=${STATIONLY_AFFILIATE_ID}`
-}
-
-function makePcComponentesLink(name: string): string {
-  const query = name.trim().replace(/\s+/g, '+')
-  return `https://www.pccomponentes.com/buscar/?query=${query}`
 }
 
 type Props = { 
@@ -131,7 +113,7 @@ export default function ComponentsList({ components, country }: Props) {
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
                   <a href={makeAmazonLink(comp.display_name, country)} target="_blank" rel="noopener noreferrer" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', color: 'var(--accent-fg, #0a0a0b)', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>Amazon →</a>
-                  {(!country || country === 'ES') && (
+                  {showsPcComponentes(country) && (
                     <a href={makePcComponentesLink(comp.display_name)} target="_blank" rel="noopener noreferrer" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>PcComponentes →</a>
                   )}
                 </div>
