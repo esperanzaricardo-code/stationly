@@ -118,17 +118,23 @@ function LoginForm() {
           || signInData.user?.email?.split('@')[0] || ''
         const sessionToken = signInData.session?.access_token
 
+        let justCreatedProfile = false
+        let loginIsFounder = false
+
         if (loginUsername && sessionToken) {
           const { data: existingProfile } = await supabase
             .from('profiles').select('username').eq('username', loginUsername).single()
 
           if (!existingProfile) {
+            justCreatedProfile = true
             try {
-              await fetch('/api/founder', {
+              const founderRes = await fetch('/api/founder', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: loginUsername, sessionToken }),
               })
+              const { isFounder } = await founderRes.json()
+              loginIsFounder = !!isFounder
             } catch {
               // No bloqueamos el login si esto falla; el usuario podrá
               // reintentarlo en su siguiente inicio de sesión.
@@ -136,7 +142,14 @@ function LoginForm() {
           }
         }
 
-        router.push('/feed')
+        // Si acabamos de crear el profile en este login (primera vez que
+        // el usuario entra tras confirmar su email), mostramos el mismo
+        // modal de bienvenida que vería justo tras registrarse.
+        if (justCreatedProfile) {
+          setWelcomeModal({ show: true, isFounder: loginIsFounder })
+        } else {
+          router.push('/feed')
+        }
       } else {
         const { data: signUpData, error } = await supabase.auth.signUp({
           email, password,
