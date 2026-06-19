@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import { Setup } from '@/lib/supabase'
 import SetupCard from './SetupCard'
-
-const STATIONLY_AFFILIATE_ID = process.env.NEXT_PUBLIC_AMAZON_AFFILIATE_ID || 'stationly-21'
+import { makeAmazonLink, makePcComponentesLink, showsPcComponentes } from '@/lib/amazon'
 
 const CATEGORY_ICONS: Record<string, string> = {
   'GPU': 'GPU',
@@ -29,16 +28,6 @@ function getIcon(category: string | null): string {
   return CATEGORY_ICONS[category] || '?'
 }
 
-function makeAmazonLink(name: string): string {
-  const query = name.trim().replace(/\s+/g, '+')
-  return `https://www.amazon.es/s?k=${query}&tag=${STATIONLY_AFFILIATE_ID}`
-}
-
-function makePcComponentesLink(name: string): string {
-  const query = name.trim().replace(/\s+/g, '+')
-  return `https://www.pccomponentes.com/buscar/?query=${query}`
-}
-
 type ComponentInfo = {
   id: string
   normalized_name: string
@@ -47,7 +36,7 @@ type ComponentInfo = {
   setup_count: number
 }
 
-export default function ComponentDetail({ component, setups }: { component: ComponentInfo; setups: Setup[] }) {
+export default function ComponentDetail({ component, setups, country }: { component: ComponentInfo; setups: Setup[]; country?: string }) {
   return (
     <div style={{ position: 'relative', zIndex: 1, paddingTop: 24 }}>
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 32px 16px' }}>
@@ -86,7 +75,7 @@ export default function ComponentDetail({ component, setups }: { component: Comp
 
           <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
             <a
-              href={makeAmazonLink(component.display_name)}
+              href={makeAmazonLink(component.display_name, country)}
               target="_blank" rel="noopener noreferrer"
               style={{
                 background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
@@ -96,17 +85,19 @@ export default function ComponentDetail({ component, setups }: { component: Comp
             >
               Amazon &#8594;
             </a>
-            <a
-              href={makePcComponentesLink(component.display_name)}
-              target="_blank" rel="noopener noreferrer"
-              style={{
-                background: 'var(--surface2)', border: '1px solid var(--border)',
-                color: 'var(--text-muted)', fontSize: 13, fontWeight: 700,
-                padding: '9px 18px', borderRadius: 50, textDecoration: 'none',
-              }}
-            >
-              PcComponentes &#8594;
-            </a>
+            {showsPcComponentes(country) && (
+              <a
+                href={makePcComponentesLink(component.display_name)}
+                target="_blank" rel="noopener noreferrer"
+                style={{
+                  background: 'var(--surface2)', border: '1px solid var(--border)',
+                  color: 'var(--text-muted)', fontSize: 13, fontWeight: 700,
+                  padding: '9px 18px', borderRadius: 50, textDecoration: 'none',
+                }}
+              >
+                PcComponentes &#8594;
+              </a>
+            )}
           </div>
         </div>
 
