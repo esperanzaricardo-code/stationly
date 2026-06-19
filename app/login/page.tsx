@@ -109,20 +109,36 @@ function LoginForm() {
         if (error) throw error
         router.push('/feed')
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email, password,
           options: { data: { username } }
         })
         if (error) throw error
 
-        // Llamar a la API para asignar Founder si es elegible
-        const founderRes = await fetch('/api/founder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username }),
-        })
-        const { isFounder } = await founderRes.json()
-        setWelcomeModal({ show: true, isFounder: !!isFounder })
+        // Llamar a la API para asignar Founder si es elegible.
+        // Necesitamos el access_token de la sesión recién creada: la API
+        // verifica que quien hace la petición es el propio usuario.
+        let sessionToken = signUpData.session?.access_token
+        if (!sessionToken) {
+          const { data: sessionData } = await supabase.auth.getSession()
+          sessionToken = sessionData.session?.access_token
+        }
+
+        if (sessionToken) {
+          const founderRes = await fetch('/api/founder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, sessionToken }),
+          })
+          const { isFounder } = await founderRes.json()
+          setWelcomeModal({ show: true, isFounder: !!isFounder })
+        } else {
+          // Si el proyecto exige confirmación de email, no hay sesión
+          // todavía y no podemos verificar Founder ahora mismo.
+          // Mostramos el modal sin badge; el usuario podrá reclamarlo
+          // más adelante una vez confirme su email e inicie sesión.
+          setWelcomeModal({ show: true, isFounder: false })
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error desconocido'
