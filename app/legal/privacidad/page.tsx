@@ -66,7 +66,8 @@ export default function PrivacyPage() {
             <li><strong>Otros usuarios:</strong> tu nombre de usuario, setups, componentes y estadísticas públicas (likes, número de setups) son visibles para cualquier visitante de la plataforma, ya que Stationly es una red social pública.</li>
           </ul>
           <p>
-            Cuando haces clic en un enlace de compra hacia Amazon o PcComponentes, sales de Stationly y pasas a estar sujeto a las políticas de privacidad de esas tiendas.
+            Cuando haces clic en un enlace de compra hacia Amazon o PcComponentes, sales de Stationly y pasas a estar sujeto a las políticas de privacidad de esas tiendas. <strong>Aviso de transparencia:</strong> estos enlaces son enlaces de afiliados — si compras a través de ellos, Stationly puede recibir una pequeña comisión sin coste adicional para ti. Puedes consultar el detalle completo en la sección 5 de nuestros{' '}
+            <a href="/legal/terminos" style={{ color: 'var(--accent)' }}>Términos de Servicio</a>.
           </p>
 
           <h2 style={sectionTitle}>5. Uso de inteligencia artificial</h2>
