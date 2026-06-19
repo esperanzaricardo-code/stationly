@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import { supabase, Setup } from '@/lib/supabase'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import AnimatedBackground from '@/components/AnimatedBackground'
@@ -36,13 +37,14 @@ export default async function ComponentDetailPage({ params }: { params: { id: st
   const component = await getComponent(params.id)
   if (!component) notFound()
   const setups = await getSetupsUsingComponent(component.normalized_name)
+  const country = cookies().get('stationly_country')?.value
   return (
     <ThemeProvider>
       <AnimatedBackground />
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Nav />
         <div style={{ flex: 1 }}>
-          <ComponentDetail component={component} setups={setups} />
+          <ComponentDetail component={component} setups={setups} country={country} />
         </div>
         <Footer />
       </div>
