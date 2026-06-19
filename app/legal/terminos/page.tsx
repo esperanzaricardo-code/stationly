@@ -52,11 +52,17 @@ export default function TermsPage() {
             Stationly utiliza inteligencia artificial para identificar automáticamente los componentes de tu setup a partir del texto o fotos que proporciones. Esta identificación es una ayuda automatizada y puede contener errores o imprecisiones. Eres responsable de revisar y corregir los nombres de los componentes antes de publicarlos. Stationly no garantiza la exactitud de las identificaciones generadas por IA.
           </p>
 
-          <h2 style={sectionTitle}>5. Enlaces de afiliados</h2>
+          <h2 style={sectionTitle}>5. Enlaces de afiliados — Aviso de transparencia</h2>
+          <p style={{ marginBottom: 12 }}>
+            <strong>Stationly es miembro del Programa de Afiliados de Amazon EU</strong>, un programa de publicidad para afiliados diseñado para ofrecer a los sitios web un medio de obtener comisiones por publicidad, publicitando y enlazando a Amazon.es, Amazon.com y otros dominios de Amazon. También podemos enlazar a otras tiendas, como PcComponentes, bajo condiciones similares.
+          </p>
           <ul style={listStyle}>
-            <li>Stationly participa en el Programa de Afiliados de Amazon y puede mostrar enlaces hacia PcComponentes y otras tiendas. Esto significa que podemos recibir una comisión por las compras realizadas a través de esos enlaces, sin coste adicional para ti.</li>
-            <li>Si configuras tu propio ID de afiliado de Amazon Associates, los enlaces de tus componentes usarán tu identificador en lugar del de Stationly.</li>
-            <li>No garantizamos disponibilidad, precio ni características de los productos enlazados, ya que dependen enteramente de las tiendas externas.</li>
+            <li>Cuando haces clic en un botón o enlace de "Amazon →" o "PcComponentes →" en Stationly y compras un producto, <strong>podemos recibir una pequeña comisión</strong> por esa venta. Esto no supone ningún coste adicional para ti: pagas exactamente el mismo precio que pagarías entrando directamente a la tienda.</li>
+            <li>Estos enlaces de afiliados se generan automáticamente a partir de los componentes que los usuarios identifican en sus setups, y se muestran en el feed, en las páginas de perfil y en el índice de componentes.</li>
+            <li>El dominio de la tienda (por ejemplo amazon.es o amazon.com) se selecciona automáticamente según el país desde el que navegas, para mostrarte la tienda más relevante.</li>
+            <li>Si configuras tu propio ID de afiliado de Amazon Associates en tu perfil, los enlaces de tus componentes usarán tu identificador en lugar del de Stationly, y serás tú quien reciba la comisión correspondiente.</li>
+            <li>No garantizamos disponibilidad, precio ni características de los productos enlazados, ya que dependen enteramente de las tiendas externas y pueden cambiar en cualquier momento.</li>
+            <li>Esta relación de afiliación no influye en qué componentes se muestran o se recomiendan: el contenido proviene de los setups reales publicados por la comunidad, no de acuerdos comerciales con marcas concretas.</li>
           </ul>
 
           <h2 style={sectionTitle}>6. Conducta del usuario</h2>
