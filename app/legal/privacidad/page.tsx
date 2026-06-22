@@ -24,7 +24,7 @@ export default function PrivacyPage() {
 
           <p style={{ marginBottom: 20 }}>
             Esta Política de Privacidad explica cómo Stationly recoge, usa y protege tu información cuando utilizas la plataforma. Stationly es operada actualmente por una persona física a título individual ("nosotros", "el Responsable"). Puedes contactarnos en{' '}
-            <a href="mailto:privacidad@stationly.com" style={{ color: 'var(--accent)' }}>privacidad@stationly.com</a> para cualquier duda sobre privacidad o tus datos.
+            <a href="mailto:privacidad@stationly.app" style={{ color: 'var(--accent)' }}>privacidad@stationly.app</a> para cualquier duda sobre privacidad o tus datos.
           </p>
 
           <h2 style={sectionTitle}>1. Qué datos recogemos</h2>
@@ -92,7 +92,7 @@ export default function PrivacyPage() {
           </ul>
           <p>
             Para ejercer cualquiera de estos derechos, escríbenos a{' '}
-            <a href="mailto:privacidad@stationly.com" style={{ color: 'var(--accent)' }}>privacidad@stationly.com</a>.
+            <a href="mailto:privacidad@stationly.app" style={{ color: 'var(--accent)' }}>privacidad@stationly.app</a>.
           </p>
 
           <h2 style={sectionTitle}>8. Cookies</h2>
@@ -113,7 +113,7 @@ export default function PrivacyPage() {
           <h2 style={sectionTitle}>11. Contacto</h2>
           <p>
             Para cualquier duda sobre esta política o sobre el tratamiento de tus datos, escríbenos a{' '}
-            <a href="mailto:privacidad@stationly.com" style={{ color: 'var(--accent)' }}>privacidad@stationly.com</a>.
+            <a href="mailto:privacidad@stationly.app" style={{ color: 'var(--accent)' }}>privacidad@stationly.app</a>.
           </p>
 
         </div>
