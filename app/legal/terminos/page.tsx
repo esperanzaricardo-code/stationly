@@ -108,7 +108,7 @@ export default function TermsPage() {
           <h2 style={sectionTitle}>13. Contacto</h2>
           <p>
             Para cualquier duda sobre estos términos, escríbenos a{' '}
-            <a href="mailto:contacto@stationly.com" style={{ color: 'var(--accent)' }}>contacto@stationly.com</a>.
+            <a href="mailto:contacto@stationly.app" style={{ color: 'var(--accent)' }}>contacto@stationly.app</a>.
           </p>
 
         </div>
