@@ -28,7 +28,7 @@ export default function Footer() {
           <Link href="/legal/cookies" style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Cookies</Link>
         </div>
         <p style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-          © 2026 Stationly
+          © 2026 Stationly. Hecho para creadores.
         </p>
       </div>
     </footer>
