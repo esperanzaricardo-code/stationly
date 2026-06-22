@@ -108,25 +108,27 @@ function LoginForm() {
         const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
 
-        // Si el proyecto exige confirmación de email, el registro no pudo
-        // crear el profile (no había sesión todavía). Este es el primer
-        // momento en que sí la hay, así que comprobamos si falta el
-        // profile y, si es así, lo creamos ahora (asignando Founder si
-        // sigue siendo elegible). assign_founder_if_eligible es seguro
-        // de llamar más de una vez: usa ON CONFLICT internamente.
+        const sessionToken = signInData.session?.access_token
         const loginUsername = signInData.user?.user_metadata?.username
           || signInData.user?.email?.split('@')[0] || ''
-        const sessionToken = signInData.session?.access_token
 
-        let justCreatedProfile = false
+        // Comprobar si el profile ya tiene el badge Founder asignado.
+        // Si no lo tiene aún, llamamos a /api/founder para asignarlo
+        // (assign_founder_if_eligible es idempotente: usa ON CONFLICT).
+        // Esto cubre el caso del primer login tras confirmar email.
+        let showModal = false
         let loginIsFounder = false
 
         if (loginUsername && sessionToken) {
-          const { data: existingProfile } = await supabase
-            .from('profiles').select('username').eq('username', loginUsername).single()
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('tag')
+            .eq('username', loginUsername)
+            .single()
 
-          if (!existingProfile) {
-            justCreatedProfile = true
+          if (!profile || profile.tag !== 'Founder') {
+            // Profile no existe o aún no tiene badge Founder → primer login real tras confirmar email
+            showModal = true
             try {
               const founderRes = await fetch('/api/founder', {
                 method: 'POST',
@@ -136,51 +138,31 @@ function LoginForm() {
               const { isFounder } = await founderRes.json()
               loginIsFounder = !!isFounder
             } catch {
-              // No bloqueamos el login si esto falla; el usuario podrá
-              // reintentarlo en su siguiente inicio de sesión.
+              // No bloqueamos el login si esto falla
             }
           }
         }
 
-        // Si acabamos de crear el profile en este login (primera vez que
-        // el usuario entra tras confirmar su email), mostramos el mismo
-        // modal de bienvenida que vería justo tras registrarse.
-        if (justCreatedProfile) {
+        if (showModal) {
           setWelcomeModal({ show: true, isFounder: loginIsFounder })
         } else {
           router.push('/feed')
         }
+
       } else {
-        const { data: signUpData, error } = await supabase.auth.signUp({
+        // REGISTRO: Supabase exige confirmar email antes de dar sesión.
+        // No mostramos popup aquí — solo un mensaje para revisar el correo.
+        const { error } = await supabase.auth.signUp({
           email, password,
           options: { data: { username } }
         })
         if (error) throw error
 
-        // Llamar a la API para asignar Founder si es elegible.
-        // Necesitamos el access_token de la sesión recién creada: la API
-        // verifica que quien hace la petición es el propio usuario.
-        let sessionToken = signUpData.session?.access_token
-        if (!sessionToken) {
-          const { data: sessionData } = await supabase.auth.getSession()
-          sessionToken = sessionData.session?.access_token
-        }
-
-        if (sessionToken) {
-          const founderRes = await fetch('/api/founder', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, sessionToken }),
-          })
-          const { isFounder } = await founderRes.json()
-          setWelcomeModal({ show: true, isFounder: !!isFounder })
-        } else {
-          // Si el proyecto exige confirmación de email, no hay sesión
-          // todavía y no podemos verificar Founder ahora mismo.
-          // Mostramos el modal sin badge; el usuario podrá reclamarlo
-          // más adelante una vez confirme su email e inicie sesión.
-          setWelcomeModal({ show: true, isFounder: false })
-        }
+        // Mostrar mensaje de confirmación en lugar del popup
+        setSuccess('✉️ Te hemos enviado un email de confirmación. Revisa tu bandeja de entrada y haz clic en "Confirmar email" para activar tu cuenta.')
+        setEmail('')
+        setPassword('')
+        setUsername('')
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error desconocido'
@@ -233,7 +215,7 @@ function LoginForm() {
 
           <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 50, padding: 4, marginBottom: 28 }}>
             {(['login', 'register'] as const).map(m => (
-              <button key={m} onClick={() => { setMode(m); setError('') }} style={{
+              <button key={m} onClick={() => { setMode(m); setError(''); setSuccess('') }} style={{
                 flex: 1, padding: '8px', borderRadius: 50, border: 'none',
                 background: mode === m ? 'linear-gradient(135deg, #CFFA7C, #9CE89D)' : 'transparent',
                 color: mode === m ? '#0a0a0b' : 'var(--text-muted)',
@@ -306,15 +288,17 @@ function LoginForm() {
           ) : null}
 
           {success && (
-            <div style={{ background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', color: 'var(--tag-text)', fontSize: 13, padding: '10px 14px', borderRadius: 'var(--radius-sm)', marginBottom: 16 }}>
+            <div style={{ background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', color: 'var(--tag-text)', fontSize: 13, padding: '12px 14px', borderRadius: 'var(--radius-sm)', marginBottom: 16, lineHeight: 1.6 }}>
               {success}
             </div>
           )}
 
-          <button onClick={handleSubmit} disabled={loading} className="btn-primary"
-            style={{ width: '100%', fontSize: 15, padding: 14, opacity: loading ? 0.6 : 1, marginTop: 8 }}>
-            {loading ? '⏳ Cargando...' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
-          </button>
+          {!success && (
+            <button onClick={handleSubmit} disabled={loading} className="btn-primary"
+              style={{ width: '100%', fontSize: 15, padding: 14, opacity: loading ? 0.6 : 1, marginTop: 8 }}>
+              {loading ? '⏳ Cargando...' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
+            </button>
+          )}
 
           <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>
             <Link href="/" style={{ color: 'var(--tag-text)', textDecoration: 'none' }}>← Volver al inicio</Link>
