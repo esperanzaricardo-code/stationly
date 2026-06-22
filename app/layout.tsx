@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: 'Stationly — Share Your Setup',
   description: 'La red social para streamers y creadores. Comparte tu setup, etiqueta tus componentes y descubre los mejores escritorios.',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/favicon.png',
     shortcut: '/favicon.ico',
   },
   openGraph: {
