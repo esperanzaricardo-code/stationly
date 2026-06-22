@@ -60,15 +60,21 @@ function WelcomeModal({ isFounder, onClose }: { isFounder: boolean; onClose: () 
 export default function WelcomePage() {
   const router = useRouter()
   const [modal, setModal] = useState<{ show: boolean; isFounder: boolean } | null>(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function init() {
-      // Esperar a que Supabase procese el token del hash de la URL
-      const { data: { session } } = await supabase.auth.getSession()
+    // Aplicar colores lima
+    try {
+      const root = document.documentElement
+      root.style.setProperty('--accent', '#CFFA7C')
+      root.style.setProperty('--accent2', '#9CE89D')
+      root.style.setProperty('--accent-glow', 'rgba(207,250,124,0.25)')
+      root.style.setProperty('--tag-bg', 'rgba(207,250,124,0.1)')
+      root.style.setProperty('--tag-border', 'rgba(207,250,124,0.3)')
+      root.style.setProperty('--tag-text', '#CFFA7C')
+    } catch {}
 
+    async function handleSession(session: any) {
       if (!session) {
-        // No hay sesión — redirigir al login
         router.replace('/login')
         return
       }
@@ -85,7 +91,7 @@ export default function WelcomePage() {
         .single()
 
       if (profile?.tag === 'Founder' || profile?.tag === 'User') {
-        // Ya procesado anteriormente — ir al feed directamente
+        // Ya procesado — ir al feed
         router.replace('/feed')
         return
       }
@@ -103,10 +109,21 @@ export default function WelcomePage() {
       } catch {}
 
       setModal({ show: true, isFounder })
-      setLoading(false)
     }
 
-    init()
+    // Escuchar el evento SIGNED_IN que Supabase dispara al procesar el token del hash
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        handleSession(session)
+      }
+    })
+
+    // También comprobar si ya hay sesión activa al cargar
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) handleSession(session)
+    })
+
+    return () => subscription.unsubscribe()
   }, [router])
 
   function handleClose() {
@@ -114,30 +131,15 @@ export default function WelcomePage() {
     router.replace('/feed')
   }
 
-  // Aplicar colores lima
-  useEffect(() => {
-    try {
-      const root = document.documentElement
-      root.style.setProperty('--accent', '#CFFA7C')
-      root.style.setProperty('--accent2', '#9CE89D')
-      root.style.setProperty('--accent-glow', 'rgba(207,250,124,0.25)')
-      root.style.setProperty('--tag-bg', 'rgba(207,250,124,0.1)')
-      root.style.setProperty('--tag-border', 'rgba(207,250,124,0.3)')
-      root.style.setProperty('--tag-text', '#CFFA7C')
-    } catch {}
-  }, [])
-
   return (
     <ThemeProvider>
       <AnimatedBackground />
       {modal?.show && (
         <WelcomeModal isFounder={modal.isFounder} onClose={handleClose} />
       )}
-      {loading && (
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Preparando tu cuenta...</p>
-        </div>
-      )}
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Preparando tu cuenta...</p>
+      </div>
     </ThemeProvider>
   )
 }
