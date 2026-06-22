@@ -300,7 +300,15 @@ function LoginForm() {
             </button>
           )}
 
-          <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>
+          {mode === 'login' && !success && (
+            <p style={{ textAlign: 'center', marginTop: 14, fontSize: 13 }}>
+              <Link href="/reset-password" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </p>
+          )}
+
+          <p style={{ textAlign: 'center', marginTop: 12, fontSize: 13, color: 'var(--text-dim)' }}>
             <Link href="/" style={{ color: 'var(--tag-text)', textDecoration: 'none' }}>← Volver al inicio</Link>
           </p>
         </div>
