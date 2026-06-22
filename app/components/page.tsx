@@ -28,8 +28,10 @@ export default async function ComponentsPage() {
   return (
     <ThemeProvider>
       <AnimatedBackground />
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Nav />
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+        <div style={{ position: 'relative', zIndex: 101 }}>
+          <Nav />
+        </div>
         <div style={{ position: 'relative', zIndex: 1, paddingTop: 24, flex: 1 }}>
           <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px 16px' }}>
             <h1 style={{
