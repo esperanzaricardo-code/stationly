@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 type Comment = {
   id: string
@@ -42,6 +41,255 @@ function timeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
 }
 
+// ─── Componente de item de comentario (fuera del componente principal para evitar remount) ───
+
+type CommentItemProps = {
+  comment: Comment
+  depth: number
+  replies: Comment[]
+  currentUsername: string
+  isOwner: boolean
+  isLoggedIn: boolean
+  sessionToken: string
+  reportedIds: Set<string>
+  collapsed: Set<string>
+  replyingToId: string | null
+  onDelete: (id: string) => void
+  onPin: (id: string, pinned: boolean) => void
+  onReport: (id: string, reason: string) => void
+  onToggleCollapse: (id: string) => void
+  onSetReplyingTo: (id: string | null) => void
+  onSubmitReply: (parentId: string, body: string) => void
+  onRequireAuth: () => void
+  allComments: Comment[]
+}
+
+function CommentItem({
+  comment, depth, replies, currentUsername, isOwner, isLoggedIn,
+  reportedIds, collapsed, replyingToId, onDelete, onPin, onReport,
+  onToggleCollapse, onSetReplyingTo, onSubmitReply, onRequireAuth, allComments,
+}: CommentItemProps) {
+  const [hovered, setHovered] = useState(false)
+  const [reportingOpen, setReportingOpen] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [replyBody, setReplyBody] = useState('')
+  const replyRef = useRef<HTMLTextAreaElement>(null)
+
+  const isAuthor = currentUsername.toLowerCase() === comment.username.toLowerCase()
+  const canDelete = isAuthor || isOwner
+  const isCollapsed = collapsed.has(comment.id)
+  const isReplying = replyingToId === comment.id
+  const isReported = reportedIds.has(comment.id)
+
+  const POSITION_COLORS = ['#C9A84C', '#9BA3AF', '#9C6B3C']
+  const borderColor = `rgba(255,255,255,0.06)`
+
+  function handleReply() {
+    if (!isLoggedIn) { onRequireAuth(); return }
+    if (isReplying) { onSetReplyingTo(null) } else { onSetReplyingTo(comment.id) }
+    setReplyBody('')
+  }
+
+  function handleSubmitReply() {
+    if (!replyBody.trim()) return
+    onSubmitReply(comment.id, replyBody)
+    setReplyBody('')
+  }
+
+  function handleReport() {
+    if (!isLoggedIn) { onRequireAuth(); return }
+    setReportingOpen(v => !v)
+    setReportReason('')
+  }
+
+  function submitReport() {
+    if (!reportReason.trim()) return
+    onReport(comment.id, reportReason)
+    setReportingOpen(false)
+    setReportReason('')
+  }
+
+  return (
+    <div style={{ marginLeft: depth > 0 ? 32 : 0, position: 'relative' }}>
+      {depth > 0 && (
+        <div style={{ position: 'absolute', left: -16, top: 0, bottom: 0, width: 1, background: 'var(--border)' }} />
+      )}
+
+      <div
+        style={{ display: 'flex', gap: 10, marginBottom: 14 }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {/* Avatar */}
+        <div style={{
+          width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+          background: getAvatarGradient(comment.username),
+          fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 10,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0b',
+          border: comment.pinned ? '1px solid var(--accent)' : 'none',
+        }}>
+          {comment.username.slice(0, 2).toUpperCase()}
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Cabecera */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+              {comment.username}
+            </span>
+            {comment.pinned && (
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', borderRadius: 50, padding: '1px 8px' }}>
+                📌 fijado
+              </span>
+            )}
+            {comment.component_name && (
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 50, padding: '1px 8px' }}>
+                {comment.component_name}
+              </span>
+            )}
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(comment.created_at)}</span>
+          </div>
+
+          {/* Cuerpo */}
+          <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.55, margin: '0 0 6px', wordBreak: 'break-word' }}>
+            {comment.body}
+          </p>
+
+          {/* Acciones */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <button onClick={handleReply}
+              style={{ background: 'transparent', border: 'none', color: isReplying ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'var(--font-display)' }}>
+              Responder
+            </button>
+
+            {replies.length > 0 && (
+              <button onClick={() => onToggleCollapse(comment.id)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer', padding: 0 }}>
+                {isCollapsed ? `▶ Ver ${replies.length} respuesta${replies.length !== 1 ? 's' : ''}` : '▼ Ocultar'}
+              </button>
+            )}
+
+            {isOwner && !comment.parent_id && (
+              <button onClick={() => onPin(comment.id, !comment.pinned)}
+                style={{ background: 'transparent', border: 'none', color: comment.pinned ? 'var(--accent)' : 'var(--text-dim)', fontSize: 11, cursor: 'pointer', padding: 0 }}>
+                {comment.pinned ? '📌 Despinar' : '📌 Fijar'}
+              </button>
+            )}
+
+            {!isAuthor && !isReported && (
+              <button onClick={handleReport}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer', padding: 0 }}>
+                ⚑ Reportar
+              </button>
+            )}
+            {isReported && <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Reportado</span>}
+
+            {canDelete && (
+              <button onClick={() => onDelete(comment.id)}
+                style={{ background: 'transparent', border: 'none', color: 'rgba(255,77,109,0.6)', fontSize: 11, cursor: 'pointer', padding: 0 }}>
+                Eliminar
+              </button>
+            )}
+          </div>
+
+          {/* Form de reporte */}
+          {reportingOpen && (
+            <div style={{ marginTop: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 8px' }}>¿Por qué reportas este comentario?</p>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                {['Spam', 'Contenido inapropiado', 'Acoso', 'Otro'].map(r => (
+                  <button key={r} onClick={() => setReportReason(r)} style={{
+                    fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 50, cursor: 'pointer',
+                    background: reportReason === r ? 'var(--tag-bg)' : 'transparent',
+                    border: reportReason === r ? '1px solid var(--tag-border)' : '1px solid var(--border)',
+                    color: reportReason === r ? 'var(--tag-text)' : 'var(--text-muted)',
+                  }}>{r}</button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={submitReport} disabled={!reportReason}
+                  style={{ fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 50, cursor: 'pointer', background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', opacity: reportReason ? 1 : 0.4 }}>
+                  Enviar reporte
+                </button>
+                <button onClick={() => setReportingOpen(false)}
+                  style={{ fontSize: 12, padding: '5px 14px', borderRadius: 50, cursor: 'pointer', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Form de respuesta */}
+          {isReplying && (
+            <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+              <textarea
+                ref={replyRef}
+                autoFocus
+                value={replyBody}
+                onChange={e => setReplyBody(e.target.value)}
+                placeholder={`Responder a ${comment.username}...`}
+                rows={2}
+                maxLength={500}
+                style={{
+                  flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)',
+                  color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 13,
+                  padding: '8px 12px', borderRadius: 8, outline: 'none', resize: 'none',
+                }}
+                onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmitReply() }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <button onClick={handleSubmitReply} disabled={!replyBody.trim()}
+                  style={{ fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, var(--accent), var(--accent2))', border: 'none', color: '#0a0a0b', opacity: !replyBody.trim() ? 0.5 : 1 }}>
+                  Enviar
+                </button>
+                <button onClick={() => { onSetReplyingTo(null); setReplyBody('') }}
+                  style={{ fontSize: 12, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Respuestas anidadas */}
+      {!isCollapsed && replies.length > 0 && (
+        <div style={{ marginLeft: 38 }}>
+          {replies.map(reply => {
+            const childReplies = allComments.filter(c => c.parent_id === reply.id)
+              .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+            return (
+              <CommentItem
+                key={reply.id}
+                comment={reply}
+                depth={depth + 1}
+                replies={childReplies}
+                currentUsername={currentUsername}
+                isOwner={isOwner}
+                isLoggedIn={isLoggedIn}
+                sessionToken={sessionToken}
+                reportedIds={reportedIds}
+                collapsed={collapsed}
+                replyingToId={replyingToId}
+                onDelete={onDelete}
+                onPin={onPin}
+                onReport={onReport}
+                onToggleCollapse={onToggleCollapse}
+                onSetReplyingTo={onSetReplyingTo}
+                onSubmitReply={onSubmitReply}
+                onRequireAuth={onRequireAuth}
+                allComments={allComments}
+              />
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
+
 type Props = {
   setupId: string
   setupOwnerUsername: string
@@ -57,14 +305,10 @@ export default function Comments({ setupId, setupOwnerUsername, isOwner, isLogge
   const [loading, setLoading] = useState(true)
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [replyingTo, setReplyingTo] = useState<Comment | null>(null)
-  const [replyBody, setReplyBody] = useState('')
+  const [replyingToId, setReplyingToId] = useState<string | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
-  const [reportingId, setReportingId] = useState<string | null>(null)
   const [reportedIds, setReportedIds] = useState<Set<string>>(new Set())
-  const [reportReason, setReportReason] = useState('')
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const replyRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => { loadComments() }, [setupId])
 
@@ -79,7 +323,7 @@ export default function Comments({ setupId, setupOwnerUsername, isOwner, isLogge
   }
 
   async function submitComment(parentId?: string, text?: string) {
-    const commentBody = parentId ? (text || replyBody) : body
+    const commentBody = text || body
     if (!commentBody.trim()) return
     setSubmitting(true)
     try {
@@ -91,14 +335,14 @@ export default function Comments({ setupId, setupOwnerUsername, isOwner, isLogge
       const data = await res.json()
       if (res.ok && data.comment) {
         setComments(prev => [...prev, data.comment])
-        if (parentId) { setReplyingTo(null); setReplyBody('') }
-        else setBody('')
+        if (!parentId) setBody('')
+        else setReplyingToId(null)
       }
     } catch {}
     setSubmitting(false)
   }
 
-  async function deleteComment(commentId: string) {
+  const handleDelete = useCallback(async (commentId: string) => {
     try {
       await fetch('/api/comments', {
         method: 'DELETE',
@@ -107,9 +351,9 @@ export default function Comments({ setupId, setupOwnerUsername, isOwner, isLogge
       })
       setComments(prev => prev.filter(c => c.id !== commentId && c.parent_id !== commentId))
     } catch {}
-  }
+  }, [sessionToken, setupOwnerUsername])
 
-  async function pinComment(commentId: string, pinned: boolean) {
+  const handlePin = useCallback(async (commentId: string, pinned: boolean) => {
     try {
       await fetch('/api/comments', {
         method: 'PATCH',
@@ -121,231 +365,44 @@ export default function Comments({ setupId, setupOwnerUsername, isOwner, isLogge
         pinned: c.id === commentId ? pinned : (pinned ? false : c.pinned),
       })))
     } catch {}
-  }
+  }, [sessionToken, setupId])
 
-  async function reportComment(commentId: string) {
-    if (!reportReason.trim()) return
+  const handleReport = useCallback(async (commentId: string, reason: string) => {
     try {
       await fetch('/api/comment-reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionToken}` },
-        body: JSON.stringify({ comment_id: commentId, reason: reportReason }),
+        body: JSON.stringify({ comment_id: commentId, reason }),
       })
       setReportedIds(prev => new Set(Array.from(prev).concat(commentId)))
     } catch {}
-    setReportingId(null)
-    setReportReason('')
-  }
+  }, [sessionToken])
 
-  function toggleCollapse(id: string) {
+  const handleToggleCollapse = useCallback((id: string) => {
     setCollapsed(prev => {
-      const next = new Set(prev)
+      const next = new Set(Array.from(prev))
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
-  }
+  }, [])
 
-  // Construir árbol de comentarios
-  const topLevel = comments.filter(c => !c.parent_id).sort((a, b) => {
-    if (a.pinned && !b.pinned) return -1
-    if (!a.pinned && b.pinned) return 1
-    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  })
-  const replies = (parentId: string) => comments.filter(c => c.parent_id === parentId)
-    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+  const handleSetReplyingTo = useCallback((id: string | null) => {
+    setReplyingToId(id)
+  }, [])
+
+  const handleSubmitReply = useCallback((parentId: string, text: string) => {
+    submitComment(parentId, text)
+  }, [sessionToken, setupId])
+
+  const topLevel = comments
+    .filter(c => !c.parent_id)
+    .sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1
+      if (!a.pinned && b.pinned) return 1
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    })
 
   const totalCount = comments.length
-
-  function CommentItem({ comment, depth = 0 }: { comment: Comment; depth?: number }) {
-    const isAuthor = currentUsername.toLowerCase() === comment.username.toLowerCase()
-    const canDelete = isAuthor || isOwner
-    const childReplies = replies(comment.id)
-    const isCollapsed = collapsed.has(comment.id)
-    const isReplying = replyingTo?.id === comment.id
-
-    return (
-      <div style={{ marginLeft: depth > 0 ? 32 : 0, position: 'relative' }}>
-        {/* Línea vertical de hilo */}
-        {depth > 0 && (
-          <div style={{ position: 'absolute', left: -16, top: 0, bottom: 0, width: 1, background: 'var(--border)' }} />
-        )}
-
-        <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-          {/* Avatar */}
-          <div style={{
-            width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-            background: getAvatarGradient(comment.username),
-            fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 10,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#0a0a0b', cursor: 'pointer',
-            border: comment.pinned ? '1px solid var(--accent)' : 'none',
-          }}>
-            {comment.username.slice(0, 2).toUpperCase()}
-          </div>
-
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {/* Cabecera */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-                {comment.username}
-              </span>
-              {comment.pinned && (
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--tag-bg)', border: '1px solid var(--tag-border)', borderRadius: 50, padding: '1px 8px', letterSpacing: '0.05em' }}>
-                  📌 fijado
-                </span>
-              )}
-              {comment.component_name && (
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 50, padding: '1px 8px' }}>
-                  {comment.component_name}
-                </span>
-              )}
-              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(comment.created_at)}</span>
-            </div>
-
-            {/* Cuerpo */}
-            <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.55, margin: '0 0 6px', wordBreak: 'break-word' }}>
-              {comment.body}
-            </p>
-
-            {/* Acciones */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              {/* Responder */}
-              <button
-                onClick={() => {
-                  if (!isLoggedIn) { onRequireAuth(); return }
-                  setReplyingTo(isReplying ? null : comment)
-                  setReplyBody('')
-                  setTimeout(() => replyRef.current?.focus(), 50)
-                }}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'var(--font-display)' }}
-              >
-                Responder
-              </button>
-
-              {/* Colapsar hilo */}
-              {childReplies.length > 0 && (
-                <button
-                  onClick={() => toggleCollapse(comment.id)}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer', padding: 0 }}
-                >
-                  {isCollapsed ? `▶ Ver ${childReplies.length} respuesta${childReplies.length !== 1 ? 's' : ''}` : '▼ Ocultar'}
-                </button>
-              )}
-
-              {/* Pinar — solo dueño del setup */}
-              {isOwner && !comment.parent_id && (
-                <button
-                  onClick={() => pinComment(comment.id, !comment.pinned)}
-                  style={{ background: 'transparent', border: 'none', color: comment.pinned ? 'var(--accent)' : 'var(--text-dim)', fontSize: 11, cursor: 'pointer', padding: 0 }}
-                >
-                  {comment.pinned ? '📌 Despinar' : '📌 Fijar'}
-                </button>
-              )}
-
-              {/* Reportar — solo si no es el autor y no está ya reportado */}
-              {!isAuthor && !reportedIds.has(comment.id) && (
-                <button
-                  onClick={() => {
-                    if (!isLoggedIn) { onRequireAuth(); return }
-                    setReportingId(reportingId === comment.id ? null : comment.id)
-                    setReportReason('')
-                  }}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer', padding: 0 }}
-                >
-                  ⚑ Reportar
-                </button>
-              )}
-              {reportedIds.has(comment.id) && (
-                <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Reportado</span>
-              )}
-
-              {/* Eliminar */}
-              {canDelete && (
-                <button
-                  onClick={() => deleteComment(comment.id)}
-                  style={{ background: 'transparent', border: 'none', color: 'rgba(255,77,109,0.6)', fontSize: 11, cursor: 'pointer', padding: 0 }}
-                >
-                  Eliminar
-                </button>
-              )}
-            </div>
-
-            {/* Form de reporte */}
-            {reportingId === comment.id && (
-              <div style={{ marginTop: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 8px' }}>¿Por qué reportas este comentario?</p>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                  {['Spam', 'Contenido inapropiado', 'Acoso', 'Otro'].map(r => (
-                    <button
-                      key={r}
-                      onClick={() => setReportReason(r)}
-                      style={{
-                        fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 50, cursor: 'pointer',
-                        background: reportReason === r ? 'var(--tag-bg)' : 'transparent',
-                        border: reportReason === r ? '1px solid var(--tag-border)' : '1px solid var(--border)',
-                        color: reportReason === r ? 'var(--tag-text)' : 'var(--text-muted)',
-                      }}
-                    >{r}</button>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button
-                    onClick={() => reportComment(comment.id)}
-                    disabled={!reportReason}
-                    style={{ fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 50, cursor: 'pointer', background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', opacity: reportReason ? 1 : 0.4 }}
-                  >Enviar reporte</button>
-                  <button
-                    onClick={() => setReportingId(null)}
-                    style={{ fontSize: 12, padding: '5px 14px', borderRadius: 50, cursor: 'pointer', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
-                  >Cancelar</button>
-                </div>
-              </div>
-            )}
-
-            {/* Form de respuesta */}
-            {isReplying && (
-              <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-                <textarea
-                  ref={replyRef}
-                  value={replyBody}
-                  onChange={e => setReplyBody(e.target.value)}
-                  placeholder={`Responder a ${comment.username}...`}
-                  rows={2}
-                  maxLength={500}
-                  style={{
-                    flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)',
-                    color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 13,
-                    padding: '8px 12px', borderRadius: 8, outline: 'none', resize: 'none',
-                  }}
-                  onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitComment(comment.id, replyBody) }}
-                />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <button
-                    onClick={() => submitComment(comment.id, replyBody)}
-                    disabled={submitting || !replyBody.trim()}
-                    style={{ fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, var(--accent), var(--accent2))', border: 'none', color: '#0a0a0b', opacity: submitting || !replyBody.trim() ? 0.5 : 1 }}
-                  >Enviar</button>
-                  <button
-                    onClick={() => { setReplyingTo(null); setReplyBody('') }}
-                    style={{ fontSize: 12, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
-                  >Cancelar</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Respuestas anidadas */}
-        {!isCollapsed && childReplies.length > 0 && (
-          <div style={{ marginLeft: 38 }}>
-            {childReplies.map(reply => (
-              <CommentItem key={reply.id} comment={reply} depth={depth + 1} />
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  }
 
   return (
     <div style={{ marginTop: 40 }}>
@@ -402,8 +459,9 @@ export default function Comments({ setupId, setupOwnerUsername, isOwner, isLogge
       ) : (
         <div style={{ marginBottom: 24, textAlign: 'center', padding: '16px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10 }}>
           <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            <button onClick={onRequireAuth} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: 13, padding: 0 }}>Inicia sesión</button>
-            {' '}para comentar
+            <button onClick={onRequireAuth} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: 13, padding: 0 }}>
+              Inicia sesión
+            </button>{' '}para comentar
           </span>
         </div>
       )}
@@ -417,9 +475,34 @@ export default function Comments({ setupId, setupOwnerUsername, isOwner, isLogge
         </div>
       ) : (
         <div>
-          {topLevel.map(comment => (
-            <CommentItem key={comment.id} comment={comment} />
-          ))}
+          {topLevel.map(comment => {
+            const replies = comments
+              .filter(c => c.parent_id === comment.id)
+              .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+            return (
+              <CommentItem
+                key={comment.id}
+                comment={comment}
+                depth={0}
+                replies={replies}
+                currentUsername={currentUsername}
+                isOwner={isOwner}
+                isLoggedIn={isLoggedIn}
+                sessionToken={sessionToken}
+                reportedIds={reportedIds}
+                collapsed={collapsed}
+                replyingToId={replyingToId}
+                onDelete={handleDelete}
+                onPin={handlePin}
+                onReport={handleReport}
+                onToggleCollapse={handleToggleCollapse}
+                onSetReplyingTo={handleSetReplyingTo}
+                onSubmitReply={handleSubmitReply}
+                onRequireAuth={onRequireAuth}
+                allComments={comments}
+              />
+            )
+          })}
         </div>
       )}
     </div>
