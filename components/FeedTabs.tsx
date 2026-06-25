@@ -52,7 +52,7 @@ export default function FeedTabs({ setups, components, country }: Props) {
             fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.18s',
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
-            🏆 Setup del Mes
+             Setup del Mes
           </button>
         </div>
       </div>
