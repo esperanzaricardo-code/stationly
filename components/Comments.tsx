@@ -252,17 +252,18 @@ function CommentItem({
         </div>
       </div>
 
-      {/* Respuestas anidadas */}
+      {/* Respuestas anidadas — máximo 1 nivel de indentación */}
       {!isCollapsed && replies.length > 0 && (
-        <div style={{ marginLeft: 38 }}>
+        <div style={{ marginLeft: depth === 0 ? 38 : 0 }}>
           {replies.map(reply => {
+            // Aplanar: las respuestas a respuestas se muestran al mismo nivel
             const childReplies = allComments.filter(c => c.parent_id === reply.id)
               .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
             return (
               <CommentItem
                 key={reply.id}
                 comment={reply}
-                depth={depth + 1}
+                depth={Math.min(depth + 1, 1)}
                 replies={childReplies}
                 currentUsername={currentUsername}
                 isOwner={isOwner}
@@ -286,6 +287,15 @@ function CommentItem({
       )}
     </div>
   )
+}
+
+// Comprueba si un comentario pertenece al hilo de un comentario raíz
+function isInThread(comment: Comment, rootId: string, allComments: Comment[]): boolean {
+  if (comment.parent_id === rootId) return true
+  if (!comment.parent_id) return false
+  const parent = allComments.find(c => c.id === comment.parent_id)
+  if (!parent) return false
+  return isInThread(parent, rootId, allComments)
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -476,15 +486,16 @@ export default function Comments({ setupId, setupOwnerUsername, isOwner, isLogge
       ) : (
         <div>
           {topLevel.map(comment => {
-            const replies = comments
-              .filter(c => c.parent_id === comment.id)
+            // Todas las respuestas del hilo (directas e indirectas) se muestran al mismo nivel
+            const allReplies = comments
+              .filter(c => c.parent_id !== null && isInThread(c, comment.id, comments))
               .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
             return (
               <CommentItem
                 key={comment.id}
                 comment={comment}
                 depth={0}
-                replies={replies}
+                replies={allReplies}
                 currentUsername={currentUsername}
                 isOwner={isOwner}
                 isLoggedIn={isLoggedIn}
