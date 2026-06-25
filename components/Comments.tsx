@@ -131,7 +131,7 @@ export default function Comments({ setupId, setupOwnerUsername, isOwner, isLogge
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionToken}` },
         body: JSON.stringify({ comment_id: commentId, reason: reportReason }),
       })
-      setReportedIds(prev => new Set([...prev, commentId]))
+      setReportedIds(prev => new Set(Array.from(prev).concat(commentId)))
     } catch {}
     setReportingId(null)
     setReportReason('')
