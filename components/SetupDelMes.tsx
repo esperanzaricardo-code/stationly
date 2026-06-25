@@ -438,7 +438,7 @@ export default function SetupDelMes() {
             .eq('contest_id', c.id)
             .order('position', { ascending: true })
 
-          const winnersWithSetup: Winner[] = await Promise.all(
+          const winnersRaw = await Promise.all(
             (winners || []).map(async (w: { position: number; votes: number; setup_id: string }) => {
               const { data: setup } = await supabase
                 .from('setups')
@@ -448,7 +448,8 @@ export default function SetupDelMes() {
               return { position: w.position as 1 | 2 | 3, votes: w.votes, setup }
             })
           )
-          return { contest: c, winners: winnersWithSetup.filter(w => w.setup) }
+          const winnersWithSetup: Winner[] = winnersRaw.filter(w => w.setup !== null) as Winner[]
+          return { contest: c, winners: winnersWithSetup }
         })
       )
       setHistory(historyEntries)
