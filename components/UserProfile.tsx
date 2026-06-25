@@ -9,6 +9,7 @@ import { toastSuccess, toastError, toastInfo } from './Toast'
 import { confirm } from './ConfirmModal'
 import ReportModal from './ReportModal'
 import { makeAmazonLink, makePcComponentesLink, showsPcComponentes } from '@/lib/amazon'
+import Comments from './Comments'
 
 const CATEGORIES = ['Gaming', 'Streaming', 'Workstation', 'Minimal', 'RGB']
 const TAGS = ['Gamer', 'Streamer', 'Developer', 'Content Creator']
@@ -46,8 +47,6 @@ function totalComponents(setups: Setup[]) {
   }, 0)
 }
 
-// Detecta nombres de componentes que parecen incompletos o con texto de instrucción
-// (ej: "Apple iMac (especificar modelo: iMac 24, iMac 27, etc.)")
 function isSuspiciousName(name: string): boolean {
   if (!name) return false
   const n = name.toLowerCase()
@@ -251,18 +250,17 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [isOwner, setIsOwner] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [sessionToken, setSessionToken] = useState('')
+  const [currentUsername, setCurrentUsername] = useState('')
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showRegisterPrompt, setShowRegisterPrompt] = useState(false)
 
-  // Datos del perfil
   const [profileTag, setProfileTag] = useState<string | null>(null)
   const [roleTag, setRoleTag] = useState<string | null>(null)
   const [amazonAffiliateId, setAmazonAffiliateId] = useState<string>('')
   const [showPcComponentes, setShowPcComponentes] = useState(true)
 
-  // Edición del setup
   const [editAccentColor, setEditAccentColor] = useState<AccentColor>('lime')
   const [previewAccent, setPreviewAccent] = useState<AccentColor | null>(null)
   const [editTitle, setEditTitle] = useState('')
@@ -291,7 +289,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   const [showReport, setShowReport] = useState<Record<string, boolean>>({})
   const [showReportModal, setShowReportModal] = useState<string | null>(null)
 
-  // Cerrar popup de reporte al hacer click en cualquier sitio
   useEffect(() => {
     const hasOpen = Object.values(showReport).some(Boolean)
     if (!hasOpen) return
@@ -318,8 +315,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         setIsOwner(uname.toLowerCase() === username.toLowerCase())
         setIsLoggedIn(true)
         setSessionToken(data.session?.access_token || '')
+        setCurrentUsername(uname)
 
-        // Cargar reportes previos del usuario via API
         const token = data.session?.access_token || ''
         fetch('/api/reports', {
           headers: { Authorization: `Bearer ${token}` }
@@ -334,7 +331,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
           })
           .catch(() => {})
 
-        // Cargar los setups que el usuario ya ha likeado via API
         fetch('/api/likes', {
           headers: { Authorization: `Bearer ${token}` }
         })
@@ -367,7 +363,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     const onNewSetup = (e: Event) => {
       const newSetup = (e as CustomEvent).detail
       setSetups(prev => [newSetup, ...prev])
-      // Si el editor está abierto, cerrarlo para que no se mezclen los componentes
       setEditing(false)
       setEditComponents([])
       setEditPins([])
@@ -379,7 +374,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     return () => document.removeEventListener('stationly:new-setup', onNewSetup)
   }, [username, initialSetups])
 
-  // ── Autoguardado del borrador mientras se edita ──
   useEffect(() => {
     if (!editing || !setup) return
     const timeout = setTimeout(() => {
@@ -392,7 +386,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
     return () => clearTimeout(timeout)
   }, [editing, editTitle, editComponents, editPins, editAccentColor, componentText, scanResults, scanDone, setup])
 
-  // ── Aviso del navegador al cerrar/recargar con la edición abierta ──
   useEffect(() => {
     if (!editing) return
     const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
@@ -410,7 +403,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   }
 
   async function toggleLike(setupId: string) {
-    // Si no está registrado, mostrar popup
     if (!isLoggedIn) { setShowRegisterPrompt(true); return }
     if (likingLoading[setupId]) return
     setLikingLoading(prev => ({ ...prev, [setupId]: true }))
@@ -623,9 +615,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       formData.append('pins', JSON.stringify(editPins.filter(p => p.name.trim())))
       formData.append('accent_color', editAccentColor)
 
-      // Si hay una foto nueva, se manda el archivo al servidor para que la
-      // modere ANTES de subirla a Storage. Si no hay foto nueva, no se envía
-      // nada y el servidor deja la foto actual del setup intacta.
       if (newImageFile && newImagePreview) {
         const blobRes = await fetch(newImagePreview)
         const blob = await blobRes.blob()
@@ -637,8 +626,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       if (!res.ok) throw new Error(data.error)
 
       clearDraft(setup.id)
-      // El servidor devuelve el setup ya actualizado (incluida la foto, si cambió
-      // y pasó la moderación), así que sincronizamos el estado local con esa respuesta.
       setSetups(prev => prev.map((s, i) => i === activeSetup ? { ...s, ...data } : s))
       applyAccentColor(editAccentColor)
       toastSuccess('¡Setup guardado!')
@@ -690,10 +677,8 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
   return (
     <div data-setup-color={currentAccent} style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
 
-      {/* ── Modal registro para no registrados ── */}
       {showRegisterPrompt && <RegisterPromptModal onClose={() => setShowRegisterPrompt(false)} />}
 
-      {/* ── Modal de reporte ── */}
       {showReportModal && (
         <ReportModal
           onConfirm={(reason) => handleReport(showReportModal, reason)}
@@ -766,7 +751,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             )}
           </div>
 
-          {/* Color del setup */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Color del setup</label>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -778,13 +762,11 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             </div>
           </div>
 
-          {/* Título */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>Título del Setup</label>
             <input value={editTitle} onChange={e => setEditTitle(e.target.value)} style={inputStyle} />
           </div>
 
-          {/* Categorías */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>
               Categorías <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-dim)', fontSize: 10 }}>— elige hasta 2</span>
@@ -807,7 +789,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             </div>
           </div>
 
-          {/* Foto */}
           <div style={{ marginBottom: 20 }}>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleImageFile(e.target.files[0])} />
             {showCropper && rawImagePreview ? (
@@ -829,7 +810,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             )}
           </div>
 
-          {/* Componentes */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>🖥️ Añadir Componentes</label>
             <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>Escribe tus componentes como quieras. La IA los identificará y clasificará automáticamente.</p>
@@ -945,7 +925,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             )}
           </div>
 
-          {/* Lista componentes */}
           {editComponents.length > 0 && (
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>
@@ -971,7 +950,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             </div>
           )}
 
-          {/* Pins */}
           <div style={{ marginBottom: 24 }}>
             <button onClick={() => setShowAdvanced(v => !v)}
               style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', cursor: 'pointer', fontSize: 13, width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -986,7 +964,6 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
             )}
           </div>
 
-          {/* Guardar / Cancelar / Eliminar */}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button onClick={saveChanges} disabled={saving} className="btn-primary" style={{ flex: 1, fontSize: 14, padding: 13, opacity: saving ? 0.6 : 1 }}>
               {saving ? '⏳ Guardando...' : '✓ Guardar cambios'}
@@ -1047,6 +1024,19 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
       <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.5 }}>
         Los links llevan a tiendas externas. Si compras a través de ellos podemos recibir una pequeña comisión sin coste adicional para ti.
       </p>
+
+      {/* ── Comentarios ── */}
+      {!editing && (
+        <Comments
+          setupId={setup.id}
+          setupOwnerUsername={username}
+          isOwner={isOwner}
+          isLoggedIn={isLoggedIn}
+          sessionToken={sessionToken}
+          currentUsername={currentUsername}
+          onRequireAuth={() => setShowRegisterPrompt(true)}
+        />
+      )}
     </div>
   )
 }
