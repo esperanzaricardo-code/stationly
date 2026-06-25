@@ -175,64 +175,73 @@ function RegisterPromptModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId, country }: {
-  peripherals: Component[]; internals: Component[]; showPcComponentes: boolean; affiliateId?: string; country?: string
+function ComponentTabs({ peripherals, internals, showPcComponentes, affiliateId, country, setupId, setupOwnerUsername, isOwner, isLoggedIn, sessionToken, currentUsername, onRequireAuth }: {
+  peripherals: Component[]; internals: Component[]; showPcComponentes: boolean; affiliateId?: string; country?: string;
+  setupId: string; setupOwnerUsername: string; isOwner: boolean; isLoggedIn: boolean; sessionToken: string; currentUsername: string; onRequireAuth: () => void
 }) {
-  const [activeTab, setActiveTab] = useState<'peripherals' | 'internals'>(
+  const [activeTab, setActiveTab] = useState<'peripherals' | 'internals' | 'comments'>(
     peripherals.length > 0 ? 'peripherals' : 'internals'
   )
   const items = activeTab === 'peripherals' ? peripherals : internals
+
+  const tabBtn = (tab: typeof activeTab, label: string, count?: number) => (
+    <button onClick={() => setActiveTab(tab)} style={{
+      padding: '7px 18px', borderRadius: 'var(--radius-sm)',
+      background: activeTab === tab ? 'var(--surface)' : 'transparent',
+      border: activeTab === tab ? '1px solid var(--border)' : '1px solid transparent',
+      color: activeTab === tab ? 'var(--text)' : 'var(--text-muted)',
+      fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.18s',
+    }}>
+      {label}
+      {count !== undefined && (
+        <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === tab ? 'var(--setup-accent)' : 'var(--text-dim)' }}>{count}</span>
+      )}
+    </button>
+  )
+
   return (
     <div style={{ marginBottom: 32 }}>
       <div style={{ display: 'flex', gap: 2, marginBottom: 16, background: 'var(--surface2)', borderRadius: 'var(--radius-sm)', padding: 4, width: 'fit-content' }}>
-        {peripherals.length > 0 && (
-          <button onClick={() => setActiveTab('peripherals')} style={{
-            padding: '7px 18px', borderRadius: 'var(--radius-sm)',
-            background: activeTab === 'peripherals' ? 'var(--surface)' : 'transparent',
-            border: activeTab === 'peripherals' ? '1px solid var(--border)' : '1px solid transparent',
-            color: activeTab === 'peripherals' ? 'var(--text)' : 'var(--text-muted)',
-            fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.18s',
-          }}>
-            Periféricos
-            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'peripherals' ? 'var(--setup-accent)' : 'var(--text-dim)' }}>{peripherals.length}</span>
-          </button>
-        )}
-        {internals.length > 0 && (
-          <button onClick={() => setActiveTab('internals')} style={{
-            padding: '7px 18px', borderRadius: 'var(--radius-sm)',
-            background: activeTab === 'internals' ? 'var(--surface)' : 'transparent',
-            border: activeTab === 'internals' ? '1px solid var(--border)' : '1px solid transparent',
-            color: activeTab === 'internals' ? 'var(--text)' : 'var(--text-muted)',
-            fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.18s',
-          }}>
-            Internos
-            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: activeTab === 'internals' ? 'var(--setup-accent)' : 'var(--text-dim)' }}>{internals.length}</span>
-          </button>
-        )}
+        {peripherals.length > 0 && tabBtn('peripherals', 'Periféricos', peripherals.length)}
+        {internals.length > 0 && tabBtn('internals', 'Internos', internals.length)}
+        {tabBtn('comments', 'Comentarios')}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {items.map((comp, i) => {
-          const links = comp.links?.length > 0
-            ? comp.links.filter(l => l.shop !== 'MediaMarkt' && (showPcComponentes || l.shop !== 'PcComponentes'))
-            : generateLinks(comp.name, showPcComponentes, affiliateId, country)
-          return (
-            <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-                <CategoryPill type={comp.type} category={comp.category} />
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{comp.name}</div>
+
+      {activeTab !== 'comments' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {items.map((comp, i) => {
+            const links = comp.links?.length > 0
+              ? comp.links.filter(l => l.shop !== 'MediaMarkt' && (showPcComponentes || l.shop !== 'PcComponentes'))
+              : generateLinks(comp.name, showPcComponentes, affiliateId, country)
+            return (
+              <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                  <CategoryPill type={comp.type} category={comp.category} />
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{comp.name}</div>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {links.map((link, li) => (
+                    <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
+                      style={{ background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, color: 'var(--setup-accent-fg)', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>
+                      {link.shop} →
+                    </a>
+                  ))}
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {links.map((link, li) => (
-                  <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
-                    style={{ background: `linear-gradient(135deg, var(--setup-accent), var(--setup-accent2))`, color: 'var(--setup-accent-fg)', fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 50, textDecoration: 'none' }}>
-                    {link.shop} →
-                  </a>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      ) : (
+        <Comments
+          setupId={setupId}
+          setupOwnerUsername={setupOwnerUsername}
+          isOwner={isOwner}
+          isLoggedIn={isLoggedIn}
+          sessionToken={sessionToken}
+          currentUsername={currentUsername}
+          onRequireAuth={onRequireAuth}
+        />
+      )}
     </div>
   )
 }
@@ -1016,18 +1025,14 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
         </div>
       )}
 
-      {/* ── Tabs Periféricos / Internos ── */}
+      {/* ── Tabs Periféricos / Internos / Comentarios ── */}
       {!editing && (peripherals.length > 0 || internals.length > 0) && (
-        <ComponentTabs peripherals={peripherals} internals={internals} showPcComponentes={showPcComponentes} affiliateId={amazonAffiliateId} country={country} />
-      )}
-
-      <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.5 }}>
-        Los links llevan a tiendas externas. Si compras a través de ellos podemos recibir una pequeña comisión sin coste adicional para ti.
-      </p>
-
-      {/* ── Comentarios ── */}
-      {!editing && (
-        <Comments
+        <ComponentTabs
+          peripherals={peripherals}
+          internals={internals}
+          showPcComponentes={showPcComponentes}
+          affiliateId={amazonAffiliateId}
+          country={country}
           setupId={setup.id}
           setupOwnerUsername={username}
           isOwner={isOwner}
@@ -1037,6 +1042,10 @@ export default function UserProfile({ setups: initialSetups, username, activeSet
           onRequireAuth={() => setShowRegisterPrompt(true)}
         />
       )}
+
+      <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.5 }}>
+        Los links llevan a tiendas externas. Si compras a través de ellos podemos recibir una pequeña comisión sin coste adicional para ti.
+      </p>
     </div>
   )
 }
