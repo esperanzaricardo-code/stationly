@@ -65,7 +65,7 @@ type CommentItemProps = {
 }
 
 function CommentItem({
-  comment, depth, replies, currentUsername, isOwner, isLoggedIn,
+  comment, depth, replies, currentUsername, isOwner, isLoggedIn, sessionToken,
   reportedIds, collapsed, replyingToId, onDelete, onPin, onReport,
   onToggleCollapse, onSetReplyingTo, onSubmitReply, onRequireAuth, allComments,
 }: CommentItemProps) {
