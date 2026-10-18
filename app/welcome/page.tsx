@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ThemeProvider } from '@/components/ThemeProvider'
@@ -60,9 +60,9 @@ function WelcomeModal({ isFounder, onClose }: { isFounder: boolean; onClose: () 
 export default function WelcomePage() {
   const router = useRouter()
   const [modal, setModal] = useState<{ show: boolean; isFounder: boolean } | null>(null)
+  const handled = useRef(false)
 
   useEffect(() => {
-    // Aplicar colores lima
     try {
       const root = document.documentElement
       root.style.setProperty('--accent', '#CFFA7C')
@@ -74,9 +74,16 @@ export default function WelcomePage() {
     } catch {}
 
     async function handleSession(session: any) {
+      // Evitar procesar la sesión dos veces
+      if (handled.current) return
+      handled.current = true
+
       if (!session) {
-        router.replace('/login')
-        return
+        // Sin sesión — esperar un poco por si el token aún está procesándose
+        await new Promise(r => setTimeout(r, 2000))
+        const { data } = await supabase.auth.getSession()
+        if (!data.session) { router.replace('/login'); return }
+        return handleSession(data.session)
       }
 
       const username = session.user.user_metadata?.username
@@ -91,7 +98,7 @@ export default function WelcomePage() {
         .single()
 
       if (profile?.tag === 'Founder' || profile?.tag === 'User') {
-        // Ya procesado — ir al feed
+        // Ya procesado — ir al feed directamente
         router.replace('/feed')
         return
       }
@@ -111,16 +118,18 @@ export default function WelcomePage() {
       setModal({ show: true, isFounder })
     }
 
-    // Escuchar el evento SIGNED_IN que Supabase dispara al procesar el token del hash
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+    // Primero intentar sesión existente
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
         handleSession(session)
       }
     })
 
-    // También comprobar si ya hay sesión activa al cargar
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) handleSession(session)
+    // Listener como fallback para cuando el token aún está procesándose
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+        handleSession(session)
+      }
     })
 
     return () => subscription.unsubscribe()
